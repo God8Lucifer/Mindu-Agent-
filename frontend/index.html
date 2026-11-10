@@ -27,7 +27,7 @@
   <script src="guide/gmc-guide.js"></script>
   <script src="kiosk/kiosk.js"></script>
   <script>
-    // Mindu's answers come from the GMC AI backend (backend/), proxied at /api by serve.js.
+    // UI and API share the same origin.
     async function api(path, init) {
       const res = await fetch(path, init);
       const data = await res.json().catch(() => ({}));
@@ -62,8 +62,8 @@
       mode.className = 'mg-mode';
       el.appendChild(mode);
       api('/api/health')
-        .then((h) => { mode.textContent = h.mode === 'live-ai' ? 'Live GMC AI connected' : 'Demo mode — add OPENAI_API_KEY to .env for full answers'; })
-        .catch(() => { mode.textContent = 'AI backend offline — start it with: node backend/src/server.js'; });
+        .then((h) => { mode.textContent = h.mode === 'live-ai' ? 'Live GMC AI connected' : 'Demo mode — limited answers available'; })
+        .catch(() => { mode.textContent = 'The guide is temporarily unavailable. Please try again shortly.'; });
       return window.guide;
     }
 
@@ -73,8 +73,8 @@
       guide: document.getElementById('guide'),
       restart: document.querySelector('.ks-restart'),
       mapButton: document.querySelector('.ks-map'),
-      // The venue map is the Next.js app in Mindu-Agent-/web (npm run dev → port 3000).
-      mapUrl: 'http://localhost:3000/map',
+      // Set a deployed venue-map URL here when a map is available.
+      mapUrl: null,
       mountGuide,
     });
   </script>

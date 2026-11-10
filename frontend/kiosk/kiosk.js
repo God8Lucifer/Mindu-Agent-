@@ -121,7 +121,7 @@
       intro.innerHTML = '';
       guideEl.classList.add('ks-in');
       if (restart) restart.hidden = false;
-      if (mapButton) mapButton.hidden = false;
+      if (mapButton) mapButton.hidden = !mapUrl;
       guide.greet();
       busy = false;
     }
@@ -180,7 +180,7 @@
       guideEl.hidden = false;
       guideEl.classList.add('ks-enter');
       if (restart) restart.hidden = false;
-      if (mapButton) mapButton.hidden = false;
+      if (mapButton) mapButton.hidden = !mapUrl;
 
       const r = mapButton.getBoundingClientRect();
       const cx = r.left + r.width / 2;

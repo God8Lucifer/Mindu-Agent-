@@ -1,0 +1,13 @@
+{
+  "name": "mindu-guide",
+  "version": "2.0.0",
+  "private": true,
+  "main": "server.cjs",
+  "scripts": {
+    "start": "node server.cjs",
+    "dev": "node --watch server.cjs",
+    "test": "node --test backend/test/*.test.js",
+    "build": "node scripts/build.cjs"
+  },
+  "engines": { "node": ">=22" }
+}
