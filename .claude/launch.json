@@ -10,8 +10,14 @@
     {
       "name": "mindu-guide",
       "runtimeExecutable": "node",
-      "runtimeArgs": ["serve.js"],
+      "runtimeArgs": ["agent/serve.js"],
       "port": 4321
+    },
+    {
+      "name": "mindu-web",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "web", "run", "dev"],
+      "port": 3000
     }
   ]
 }

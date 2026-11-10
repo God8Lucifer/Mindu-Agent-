@@ -1,10 +1,12 @@
 {
-  "name": "mindu-agent-prototype",
+  "name": "mindu",
   "private": true,
-  "version": "0.1.0",
+  "description": "Mindu — Gelephu Mindfulness City visitor experience (agent UI, AI backend, web app)",
   "scripts": {
-    "dev": "node server.js",
-    "start": "node server.js"
+    "agent": "node agent/serve.js",
+    "backend": "node backend/src/server.js",
+    "web": "npm --prefix web run dev",
+    "test": "npm --prefix backend test"
   },
   "engines": {
     "node": ">=20"
