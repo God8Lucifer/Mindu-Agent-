@@ -1,0 +1,86 @@
+/* GMC design tokens (from the GMC site palette). */
+:root {
+  --radius: .5rem;
+  --background: oklch(93.5% 0 0);
+  --foreground: oklch(10% 0 0);
+  --card: oklch(100% 0 0);
+  --card-foreground: oklch(10% 0 0);
+  --popover: oklch(100% 0 0);
+  --popover-foreground: oklch(10% 0 0);
+  --primary: oklch(10% 0 0);
+  --primary-foreground: oklch(98% 0 0);
+  --secondary: oklch(92% 0 0);
+  --secondary-foreground: oklch(15% 0 0);
+  --muted: oklch(91% 0 0);
+  --muted-foreground: oklch(45% 0 0);
+  --accent: oklch(88% 0 0);
+  --accent-foreground: oklch(15% 0 0);
+  --destructive: oklch(57.7% .245 27.325);
+  --border: oklch(84% 0 0);
+  --input: oklch(88% 0 0);
+  --ring: oklch(50% 0 0);
+  --chart-1: oklch(64.6% .222 41.116);
+  --chart-2: oklch(60% .118 184.704);
+  --chart-3: oklch(39.8% .07 227.392);
+  --chart-4: oklch(82.8% .189 84.429);
+  --chart-5: oklch(76.9% .188 70.08);
+  --sidebar: oklch(98% 0 0);
+  --sidebar-foreground: oklch(15% 0 0);
+  --sidebar-primary: oklch(10% 0 0);
+  --sidebar-primary-foreground: oklch(98% 0 0);
+  --sidebar-accent: oklch(91% 0 0);
+  --sidebar-accent-foreground: oklch(15% 0 0);
+  --sidebar-border: oklch(84% 0 0);
+  --sidebar-ring: oklch(50% 0 0);
+  --footer-top: oklch(97% 0 0);
+  --footer-bottom: oklch(90% 0 0);
+  --mic-surface: #fffcf4;
+  --mic-ink: #878787;
+  --mic-heading: #717171;
+  --mic-name: #686868;
+  --mic-byline: #8f8f8f;
+  --mic-body: #2c2b2b;
+  --mic-statement: #7b7a7a;
+  --tour-ink: #2d3a2b;
+  --tour-body: #4a5d43;
+  --tour-muted: #66725d;
+  --tour-brown: #6b5444;
+  --tour-accent: #c9a961;
+  --tour-navy: #424a71;
+  --tour-surface: #f5f1e8;
+  --tour-card: #fff;
+  --tour-border: #e5e5e5;
+  --tour-panel: #ffffff6b;
+  --tour-panel-strong: #ffffff80;
+  --tour-hairline: #4a5d4324;
+  --p108-plum: #4a1a2c;
+  --p108-gold: #c8a663;
+  --p108-accent: #7e6230;
+  --p108-accent-strong: #4a1a2c;
+  --p108-accent-border: #e4d3ae;
+  --p108-accent-bg: #faf6ed;
+  --p108-accent-bg-hover: #f2e9d8;
+  --p108-glow: #c8a6632e;
+  --p108-surface: #faf6ed;
+  --p108-card: #fff;
+  --p108-heading: #4a1a2c;
+  --p108-border: #4a1a2c29;
+  --p108-border-hover: #c8a663bf;
+  --p108-body: #5a4a44;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--tour-surface);
+  color: var(--tour-ink);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}

@@ -1,0 +1,80 @@
+/* Chamber 4 avatar hologram. Palette from holo.module.css. */
+.stage {
+  position: relative; width: 110px; height: 172px;
+  display: flex; align-items: flex-end; justify-content: center;
+  pointer-events: none;
+}
+
+.figure {
+  position: relative; z-index: 1; width: 74px; height: 162px;
+  transform-origin: 50% 100%;
+  filter: drop-shadow(0 0 6px rgba(240, 131, 89, .75)) drop-shadow(0 0 16px rgba(242, 212, 78, .45));
+  opacity: .93;
+  animation: materialise .9s cubic-bezier(.2, .9, .3, 1.1) both, flicker 1s linear both;
+}
+.figureChosen { filter: drop-shadow(0 0 8px rgba(242, 212, 78, .95)) drop-shadow(0 0 24px rgba(240, 131, 89, .6)); }
+@keyframes materialise {
+  from { clip-path: inset(100% 0 0 0); transform: scaleX(.6); }
+  70% { clip-path: inset(0 0 0 0); transform: scaleX(1.04); }
+  to { clip-path: inset(0 0 0 0); transform: none; }
+}
+@keyframes flicker {
+  0% { opacity: 0; } 15% { opacity: .9; } 22% { opacity: .3; } 32% { opacity: 1; } 40% { opacity: .55; } 55%, 100% { opacity: .93; }
+}
+
+/* A bright band sweeps up as the figure appears, then fades away. */
+.scan {
+  position: absolute; inset: 0; pointer-events: none; mix-blend-mode: screen;
+  background: linear-gradient(180deg, transparent 0 44%, rgba(255, 245, 210, .95) 50%, transparent 56% 100%) 0 0 / 100% 200% no-repeat;
+  animation: sweep .9s ease-out both;
+}
+@keyframes sweep {
+  from { background-position: 0 -100%; opacity: 1; }
+  85% { opacity: 1; }
+  to { background-position: 0 100%; opacity: 0; }
+}
+
+/* Glowing disc the figure stands on (top of the beam). */
+.pad {
+  position: absolute; bottom: -5px; left: 50%; width: 88px; height: 20px; transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(242, 212, 78, .85), rgba(240, 131, 89, .35) 55%, transparent 72%);
+  box-shadow: 0 0 22px rgba(240, 131, 89, .55);
+}
+
+.caption {
+  margin: 10px 0 0; padding: 5px 12px; border-radius: 999px;
+  display: flex; gap: 8px; align-items: baseline;
+  background: rgba(45, 50, 82, .9); border: 1px solid rgba(242, 212, 78, .6);
+  color: #fffaf0; font-size: 12px;
+}
+.caption strong { color: rgb(242, 212, 78); font-size: 13px; letter-spacing: .04em; }
+.caption span { opacity: .85; }
+
+.dots { display: flex; gap: 6px; margin-top: 8px; }
+.dots span { width: 7px; height: 7px; border-radius: 50%; background: rgba(255, 250, 240, .4); box-shadow: 0 0 0 1px rgba(45, 50, 82, .6); transition: background .2s, transform .2s; }
+.dots .dotOn { background: rgb(242, 212, 78); transform: scale(1.3); }
+
+/* Card chips */
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.chip, .shuffle {
+  border: 1px solid rgba(255, 250, 240, .35); background: rgba(255, 255, 255, .06);
+  color: #fffaf0 !important; border-radius: 999px; padding: 6px 12px;
+  font-size: 12px; font-weight: 700; cursor: pointer; transition: background .15s, border-color .15s;
+}
+.chip:hover { border-color: rgb(242, 212, 78); }
+.chipLive { border-color: rgb(240, 131, 89); box-shadow: 0 0 0 1px rgb(240, 131, 89); }
+.chipOn { background: rgb(242, 212, 78); color: rgb(45, 50, 82) !important; border-color: rgb(242, 212, 78); }
+.shuffle { border-style: dashed; }
+
+@media (max-width: 720px) {
+  .stage { width: 90px; height: 130px; }
+  .figure { width: 56px; height: 122px; }
+  .pad { width: 70px; }
+  .chips { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
+  .chips::-webkit-scrollbar { display: none; }
+  .chip, .shuffle { flex: none; padding: 5px 10px; font-size: 11px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .figure, .scan { animation: none; }
+}

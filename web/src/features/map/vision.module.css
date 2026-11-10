@@ -1,0 +1,92 @@
+/* Chamber 1 hologram: the butter lamp and the 360° forest band. Palette from holo.module.css. */
+.stage {
+  position: relative; pointer-events: none;
+  display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+}
+
+/* 3D band */
+.scene {
+  position: absolute; left: 0; right: 0; top: 4%; height: 70%;
+  perspective: 900px; perspective-origin: 50% 30%;
+  animation: bandIn .9s cubic-bezier(.2, .9, .3, 1.1) both;
+}
+@keyframes bandIn { from { opacity: 0; transform: scaleY(.05); } }
+.cylinder {
+  position: absolute; left: 50%; top: 50%; width: 0; height: 0;
+  transform-style: preserve-3d;
+  pointer-events: auto;
+}
+.panel {
+  position: absolute; left: 0; top: 0;
+  background-repeat: no-repeat;
+  border-top: 2px solid rgba(242, 212, 78, .85);
+  border-bottom: 2px solid rgba(240, 131, 89, .85);
+  box-shadow: 0 0 14px rgba(240, 131, 89, .35);
+  display: grid; place-items: center;
+  /* Lets the hotspot's backface-visibility hide it on the far side of the band. */
+  transform-style: preserve-3d;
+}
+.panel::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: repeating-linear-gradient(0deg, rgba(255, 245, 220, .1) 0 1px, transparent 1px 4px);
+}
+
+.hotspot {
+  position: relative; z-index: 1;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  border: 0; background: none; padding: 0; cursor: pointer;
+  backface-visibility: hidden;
+  transform: translateZ(1px);
+  color: #fff !important;
+}
+.hotspot svg {
+  width: 34px; height: 34px; padding: 6px; border-radius: 50%;
+  background: rgba(67, 74, 113, .88); border: 2px solid rgb(242, 212, 78);
+  box-shadow: 0 0 12px rgba(242, 212, 78, .7);
+  animation: pulse 2s ease-in-out infinite;
+}
+.hotspot span {
+  font-size: 10.5px; font-weight: 700; white-space: nowrap;
+  background: rgba(45, 50, 82, .9); padding: 2px 6px; border-radius: 4px;
+}
+.hotspotOn svg { background: rgb(236, 103, 87); animation: none; }
+@keyframes pulse { 50% { box-shadow: 0 0 22px rgba(242, 212, 78, 1); } }
+
+/* The lamp */
+.lampButton {
+  position: relative; z-index: 2; pointer-events: auto;
+  width: 128px; height: 128px; padding: 0; border: 0; border-radius: 50%;
+  background: radial-gradient(circle, rgba(45, 50, 82, .55), rgba(45, 50, 82, 0) 70%);
+  display: grid; place-items: center; cursor: pointer;
+  touch-action: none; user-select: none; -webkit-user-select: none;
+  transition: transform .2s;
+}
+.lampButton:not(:disabled):hover { transform: scale(1.05); }
+.lampButton:not(:disabled):active { transform: scale(.97); }
+.lampButton:disabled { cursor: default; }
+.stageLit .lampButton { width: 92px; height: 92px; margin-bottom: 4px; }
+.lamp { width: 78%; height: 78%; display: block; filter: drop-shadow(0 4px 10px rgba(30, 33, 52, .4)); }
+.ring { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
+.ringTrack { fill: none; stroke: rgba(242, 212, 78, .35); stroke-width: 4; }
+.ringFill { fill: none; stroke: rgb(242, 212, 78); stroke-width: 5; stroke-linecap: round; filter: drop-shadow(0 0 4px rgba(240, 131, 89, .9)); }
+.flicker { animation: flicker 1.6s ease-in-out infinite; }
+@keyframes flicker {
+  0%, 100% { transform: scale(1, 1); }
+  25% { transform: scale(.96, 1.05) rotate(-1.5deg); }
+  50% { transform: scale(1.03, .96); }
+  75% { transform: scale(.98, 1.03) rotate(1.2deg); }
+}
+.lampLit { animation: glowUp 1.2s ease; }
+@keyframes glowUp { from { filter: brightness(2.2); } }
+
+.holdHint {
+  margin: 6px 0 0; padding: 4px 10px; border-radius: 999px;
+  background: rgba(45, 50, 82, .9); color: rgb(242, 212, 78);
+  font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+}
+
+.modalGlyph { color: rgb(236, 103, 87); padding: 14px; border-radius: 50%; background: #fff5ef; border: 2px solid rgb(242, 212, 78); }
+
+@media (prefers-reduced-motion: reduce) {
+  .scene, .flicker, .hotspot svg, .lampLit { animation: none; }
+}
