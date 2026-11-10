@@ -34,6 +34,18 @@ function loadProgress(): Progress {
   return { visited: [], current: null };
 }
 
+const BACK_KEY = 'mindu-back-url';
+
+function loadBackToMindu(): string | null {
+  try {
+    const fromUrl = new URLSearchParams(window.location.search).get('back');
+    if (fromUrl && /^https?:\/\//.test(fromUrl)) sessionStorage.setItem(BACK_KEY, fromUrl);
+    return sessionStorage.getItem(BACK_KEY);
+  } catch {
+    return null;
+  }
+}
+
 export default function VenueMap() {
   const controlsRef = useRef<CameraControlsImpl | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -51,6 +63,8 @@ export default function VenueMap() {
   const [query, setQuery] = useState('');
   const [openGroup, setOpenGroup] = useState<PlaceCategory | null>('chamber');
   // The map is client-only (ssr: false), so storage can be read during the first render.
+  // Opened from the Mindu kiosk guide (?back=<url>): the dock's Mindu button returns there.
+  const [backToMindu] = useState<string | null>(loadBackToMindu);
   const [visited, setVisited] = useState<Set<string>>(() => new Set(loadProgress().visited));
   const [currentId, setCurrentId] = useState<string | null>(() => loadProgress().current);
   // Chambers whose butter lamp is lit right now (only while their hologram is open).
@@ -335,7 +349,7 @@ export default function VenueMap() {
       <div className={styles.dock}>
         <button type="button" className={panel === 'find' ? styles.dockOn : ''} onClick={() => setPanel(p => (p === 'find' ? null : 'find'))}>☰ Find</button>
         <button type="button" className={panel === 'search' ? styles.dockOn : ''} onClick={() => setPanel(p => (p === 'search' ? null : 'search'))}>⌕ Search</button>
-        <a className={styles.dockGuide} href={`/mindu?place=${currentId && chamberIds.includes(currentId) ? currentId : 'chamber1'}`}>✦ Meet Mindu</a>
+        <a className={styles.dockGuide} href={backToMindu ?? `/mindu?place=${currentId && chamberIds.includes(currentId) ? currentId : 'chamber1'}`}>{backToMindu ? '← Back to Mindu' : '✦ Meet Mindu'}</a>
       </div>
 
       {/* Place card, or the richer Chamber 3 panel */}
