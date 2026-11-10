@@ -1,13 +1,24 @@
 import { chambers, type Chamber } from './chambers';
 import { AI_COVER_TIMEOUT_MS, generateAiCover } from './cover';
-import { GMC, canvasToBlob, drawCover, formatDate, loadImage, loadLogo, sans, serif } from './frame';
+import { canvasToBlob, drawCover, formatDate, loadImage, loadLogo, sans, serif } from './frame';
 
 /** The finished collection is a 9:16 story-sized image. */
 export const OUT_W = 1080;
 export const OUT_H = 1920;
-const COVER_H = 620;
+const COVER_H = 780;
 const FOOTER_H = 110;
 const PAD = 48;
+
+/** Collection colours, taken from the sunset cover photo (public/photo/gmc-cover.webp). */
+const SUNSET = {
+  paper: '#f7ecdf',     // warm cream, like the haze on the horizon
+  paperDeep: '#efd9c2', // peach, like the sky
+  amber: '#e0913f',     // glowing windows
+  ember: '#c4632f',     // autumn trees
+  brown: '#3a2416',     // deep shadows
+  night: '#2a190f',
+};
+const COVER_PHOTO = '/photo/gmc-cover.webp';
 
 export type Collection = { blob: Blob; usedAiCover: boolean };
 
@@ -25,24 +36,30 @@ export async function buildCollection(shots: Record<string, Blob[]>): Promise<Co
   if (!ctx) throw new Error('Canvas is not available');
 
   await document.fonts?.ready;
-  const [logo, aiCover] = await Promise.all([loadLogo(), tryAiCover(done, date)]);
+  const [logo, aiCover, coverPhoto] = await Promise.all([
+    loadLogo(),
+    tryAiCover(done, date),
+    loadImage(COVER_PHOTO).catch(() => null),
+  ]);
 
-  // Background
-  ctx.fillStyle = GMC.surface;
+  // Background: cream fading to sky-peach towards the footer
+  const bg = ctx.createLinearGradient(0, COVER_H, 0, OUT_H);
+  bg.addColorStop(0, SUNSET.paper);
+  bg.addColorStop(1, SUNSET.paperDeep);
+  ctx.fillStyle = bg;
   ctx.fillRect(0, 0, OUT_W, OUT_H);
 
   // Cover
-  if (aiCover) {
-    drawCover(ctx, aiCover, aiCover.naturalWidth, aiCover.naturalHeight, 0, 0, OUT_W, COVER_H);
-    // Keep the title readable over any image.
-    const g = ctx.createLinearGradient(0, COVER_H * 0.45, 0, COVER_H);
-    g.addColorStop(0, 'rgba(45,58,43,0)');
-    g.addColorStop(1, 'rgba(45,58,43,0.9)');
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, OUT_W, COVER_H);
+  const coverImg = aiCover ?? coverPhoto;
+  if (coverImg) {
+    drawCover(ctx, coverImg, coverImg.naturalWidth, coverImg.naturalHeight, 0, 0, OUT_W, COVER_H);
+    shadeCover(ctx);
   } else {
     drawTemplateCover(ctx);
   }
+  // A thin amber line where the cover meets the page
+  ctx.fillStyle = SUNSET.amber;
+  ctx.fillRect(0, COVER_H - 4, OUT_W, 4);
   drawCoverText(ctx, logo, done.length, date);
 
   // Photo grid: one row per chamber, three photos per row.
@@ -63,13 +80,13 @@ export async function buildCollection(shots: Record<string, Blob[]>): Promise<Co
   const x0 = (OUT_W - rowW) / 2;
 
   for (const { chamber, photos } of done) {
-    ctx.fillStyle = GMC.body;
+    ctx.fillStyle = SUNSET.ember;
     ctx.font = `900 20px ${sans()}`;
     setSpacing(ctx, 4);
     ctx.fillText(`CHAMBER ${chamber.number}`, x0, y + 24);
     const tagW = ctx.measureText(`CHAMBER ${chamber.number}`).width;
     setSpacing(ctx, 0);
-    ctx.fillStyle = GMC.ink;
+    ctx.fillStyle = SUNSET.brown;
     ctx.font = `700 26px ${serif()}`;
     ctx.fillText(chamber.name, x0 + tagW + 18, y + 25, rowW - tagW - 18);
 
@@ -77,6 +94,14 @@ export async function buildCollection(shots: Record<string, Blob[]>): Promise<Co
     const imgs = await Promise.all(photos.map(blobToImage));
     imgs.forEach((img, i) => {
       const tx = x0 + i * (thumbW + colGap);
+      ctx.save();
+      ctx.shadowColor = 'rgba(58,36,22,.28)';
+      ctx.shadowBlur = 18;
+      ctx.shadowOffsetY = 6;
+      ctx.fillStyle = '#fff';
+      roundRect(ctx, tx, ty, thumbW, thumbH, 14);
+      ctx.fill();
+      ctx.restore();
       ctx.save();
       roundRect(ctx, tx, ty, thumbW, thumbH, 14);
       ctx.clip();
@@ -87,9 +112,9 @@ export async function buildCollection(shots: Record<string, Blob[]>): Promise<Co
   }
 
   // Footer
-  ctx.fillStyle = GMC.ink;
+  ctx.fillStyle = SUNSET.night;
   ctx.fillRect(0, OUT_H - FOOTER_H, OUT_W, FOOTER_H);
-  ctx.fillStyle = GMC.gold;
+  ctx.fillStyle = SUNSET.amber;
   ctx.fillRect(0, OUT_H - FOOTER_H, OUT_W, 4);
   ctx.fillStyle = '#fff';
   ctx.font = `700 24px ${sans()}`;
@@ -118,11 +143,27 @@ async function tryAiCover(done: { chamber: Chamber; photos: Blob[] }[], date: st
   }
 }
 
-/** Built-in cover: deep green with gold rings, used until (or when) the AI cover isn't available. */
+/** Darkens the top and bottom of a cover photo so the logo and title stay readable. */
+function shadeCover(ctx: CanvasRenderingContext2D) {
+  const top = ctx.createLinearGradient(0, 0, 0, 220);
+  top.addColorStop(0, 'rgba(42,25,15,.55)');
+  top.addColorStop(1, 'rgba(42,25,15,0)');
+  ctx.fillStyle = top;
+  ctx.fillRect(0, 0, OUT_W, 220);
+  const bottom = ctx.createLinearGradient(0, COVER_H * 0.58, 0, COVER_H);
+  bottom.addColorStop(0, 'rgba(42,25,15,0)');
+  bottom.addColorStop(0.5, 'rgba(42,25,15,.6)');
+  bottom.addColorStop(1, 'rgba(42,25,15,.92)');
+  ctx.fillStyle = bottom;
+  ctx.fillRect(0, 0, OUT_W, COVER_H);
+}
+
+/** Fallback cover if the photo can't load: a sunset gradient with amber rings. */
 function drawTemplateCover(ctx: CanvasRenderingContext2D) {
-  const g = ctx.createLinearGradient(0, 0, OUT_W, COVER_H);
-  g.addColorStop(0, '#1f2a1e');
-  g.addColorStop(1, GMC.body);
+  const g = ctx.createLinearGradient(0, 0, 0, COVER_H);
+  g.addColorStop(0, '#c9a383');
+  g.addColorStop(0.55, '#e9b88a');
+  g.addColorStop(1, SUNSET.brown);
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, OUT_W, COVER_H);
 
@@ -130,7 +171,7 @@ function drawTemplateCover(ctx: CanvasRenderingContext2D) {
   ctx.beginPath();
   ctx.rect(0, 0, OUT_W, COVER_H);
   ctx.clip();
-  ctx.strokeStyle = 'rgba(201,169,97,0.22)';
+  ctx.strokeStyle = 'rgba(255,220,180,0.25)';
   ctx.lineWidth = 2;
   for (let r = 60; r < 900; r += 46) {
     ctx.beginPath();
@@ -142,7 +183,7 @@ function drawTemplateCover(ctx: CanvasRenderingContext2D) {
 
 function drawCoverText(ctx: CanvasRenderingContext2D, logo: HTMLImageElement | null, count: number, date: string) {
   if (logo) ctx.drawImage(logo, PAD + 10, PAD + 10, 96, 96);
-  ctx.fillStyle = GMC.gold;
+  ctx.fillStyle = '#ffc58a';
   ctx.font = `900 24px ${sans()}`;
   setSpacing(ctx, 6);
   ctx.fillText('MY EXPERIENCE CENTRE JOURNEY', PAD + 10, COVER_H - 200);

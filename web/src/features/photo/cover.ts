@@ -10,7 +10,7 @@ export type CoverRequest = {
 /**
  * AI cover hook — to be filled in by the AI side of the team.
  *
- * Return a cover image (any size; it is cropped to fill 1080×620) or `null`
+ * Return a cover image (any size; it is cropped to fill 1080×780) or `null`
  * to fall back to the built-in GMC template cover. Keep it quick: the visitor
  * is waiting on the "Building your collection" screen, and the template
  * cover is used automatically if this throws or takes longer than the timeout.

@@ -6,8 +6,8 @@
  *   guest   → the logo glides into its place in the chat and the chat rises in
  *   scan    → (mock: tap the QR) the logo shrinks into the QR, "Mindu is on your phone",
  *             then the kiosk goes back to the splash for the next visitor
- *   map     → the map button (top right of the chat) opens the experience map with a
- *             circular reveal from the button
+ *   links   → side buttons in the chat (map, camera) open those pages with a circular
+ *             reveal from the button, and bring you back with the chat restored
  *
  * Usage: MinduKiosk.start({ intro, guide, mountGuide: (el) => MinduGuide.mount(el, {...}) })
  */
@@ -38,9 +38,20 @@
     </svg>`;
   }
 
-  const mapIcon = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6.5l6-2.5 6 2.5 6-2.5v13.5l-6 2.5-6-2.5-6 2.5z"/><path d="M9 4v13.5M15 6.5V20"/></svg>`;
+  const ICONS = {
+    map: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6.5l6-2.5 6 2.5 6-2.5v13.5l-6 2.5-6-2.5-6 2.5z"/><path d="M9 4v13.5M15 6.5V20"/></svg>`,
+    photo: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8.5h3l1.6-2.5h6.8L17 8.5h3v10.5H4z"/><circle cx="12" cy="13.5" r="3.4"/></svg>`,
+  };
 
-  function start({ intro, guide: guideEl, mountGuide, restart, mapButton, mapUrl }) {
+  /*
+   * links: side buttons in the chat that open other pages of the experience, e.g.
+   *   [{ id: 'map', button, url, label: 'Opening the Experience Centre map…', dark: false }]
+ * `dark: true` paints the transition circle navy (for pages in the dark agent theme).
+   * The page is opened with ?back=<this page>?from=<id> so it can link back here.
+   */
+  function start({ intro, guide: guideEl, mountGuide, restart, links = [] }) {
+    links = links.filter((l) => l && l.button && l.url);
+    const showLinks = (on) => links.forEach((l) => { l.button.hidden = !on; });
     let busy = false;
     let stage;
     let currentGuide = null;
@@ -68,7 +79,7 @@
       guideEl.innerHTML = '';
       guideEl.className = '';
       if (restart) restart.hidden = true;
-      if (mapButton) mapButton.hidden = true;
+      showLinks(false);
 
       intro.hidden = false;
       intro.className = 'mg ks';
@@ -121,7 +132,7 @@
       intro.innerHTML = '';
       guideEl.classList.add('ks-in');
       if (restart) restart.hidden = false;
-      if (mapButton) mapButton.hidden = false;
+      showLinks(true);
       guide.greet();
       busy = false;
     }
@@ -146,32 +157,36 @@
       showIntro();
     }
 
-    // Map: a circle in the map's colour grows from the button, then the map opens.
-    async function openMap() {
-      if (busy || !mapUrl) return;
-      busy = true;
-      if ('speechSynthesis' in window) speechSynthesis.cancel();
-      const r = mapButton.getBoundingClientRect();
+    function veilAt(button, className) {
+      const r = button.getBoundingClientRect();
       const cx = r.left + r.width / 2;
       const cy = r.top + r.height / 2;
-      const radius = Math.hypot(Math.max(cx, innerWidth - cx), Math.max(cy, innerHeight - cy));
       const veil = document.createElement('div');
-      veil.className = 'ks-veil';
+      veil.className = className;
       veil.style.setProperty('--x', `${cx}px`);
       veil.style.setProperty('--y', `${cy}px`);
-      veil.style.setProperty('--r', `${radius}px`);
-      veil.innerHTML = `<div class="ks-veil-inner">${mapIcon}<p>Opening the Experience Centre map…</p></div>`;
+      veil.style.setProperty('--r', `${Math.hypot(Math.max(cx, innerWidth - cx), Math.max(cy, innerHeight - cy))}px`);
       document.body.appendChild(veil);
+      return veil;
+    }
+
+    // Open a linked page: a circle in the page's paper colour grows from the button.
+    async function openLink(link) {
+      if (busy) return;
+      busy = true;
+      if ('speechSynthesis' in window) speechSynthesis.cancel();
+      const veil = veilAt(link.button, `ks-veil${link.dark ? ' ks-veil-dark' : ''}`);
+      veil.innerHTML = `<div class="ks-veil-inner">${ICONS[link.id] || ''}<p>${link.label || 'Opening…'}</p></div>`;
       requestAnimationFrame(() => veil.classList.add('ks-veil-open'));
       if (currentGuide) saveChat(currentGuide.transcript());
       await wait(1100);
-      const back = `${location.origin}${location.pathname}?from=map`;
-      window.location.href = `${mapUrl}${mapUrl.includes('?') ? '&' : '?'}back=${encodeURIComponent(back)}`;
+      const back = `${location.origin}${location.pathname}?from=${encodeURIComponent(link.id)}`;
+      window.location.href = `${link.url}${link.url.includes('?') ? '&' : '?'}back=${encodeURIComponent(back)}`;
     }
 
-    // Back from the map: skip the intro, restore the chat, and shrink the map colour
-    // back into the map button.
-    async function returnFromMap() {
+    // Back from a linked page: skip the intro, restore the chat, and shrink the
+    // page colour back into the button it was opened from.
+    async function returnFrom(link) {
       busy = true;
       history.replaceState(null, '', location.pathname); // a reload starts fresh
       intro.hidden = true;
@@ -180,17 +195,9 @@
       guideEl.hidden = false;
       guideEl.classList.add('ks-enter');
       if (restart) restart.hidden = false;
-      if (mapButton) mapButton.hidden = false;
+      showLinks(true);
 
-      const r = mapButton.getBoundingClientRect();
-      const cx = r.left + r.width / 2;
-      const cy = r.top + r.height / 2;
-      const veil = document.createElement('div');
-      veil.className = 'ks-veil ks-veil-open ks-veil-back';
-      veil.style.setProperty('--x', `${cx}px`);
-      veil.style.setProperty('--y', `${cy}px`);
-      veil.style.setProperty('--r', `${Math.hypot(Math.max(cx, innerWidth - cx), Math.max(cy, innerHeight - cy))}px`);
-      document.body.appendChild(veil);
+      const veil = veilAt(link.button, `ks-veil ks-veil-open ks-veil-back${link.dark ? ' ks-veil-dark' : ''}`);
       await wait(150);
       veil.classList.remove('ks-veil-open');
       guideEl.classList.add('ks-in');
@@ -207,11 +214,13 @@
     });
 
     if (restart) restart.addEventListener('click', () => !busy && showIntro());
-    if (mapButton) {
-      mapButton.innerHTML = mapIcon;
-      mapButton.addEventListener('click', openMap);
-    }
-    if (mapButton && new URLSearchParams(location.search).get('from') === 'map') returnFromMap();
+    links.forEach((link) => {
+      link.button.innerHTML = ICONS[link.id] || '';
+      link.button.addEventListener('click', () => openLink(link));
+    });
+    const from = new URLSearchParams(location.search).get('from');
+    const backFrom = links.find((l) => l.id === from);
+    if (backFrom) returnFrom(backFrom);
     else showIntro();
   }
 

@@ -23,7 +23,10 @@
   <div id="intro" hidden></div>
   <main id="guide" hidden></main>
   <button type="button" class="ks-restart" hidden>↺ Start over</button>
-  <button type="button" class="ks-map" aria-label="Open the Experience Centre map" title="Experience Centre map" hidden></button>
+  <div class="ks-side">
+    <button type="button" class="ks-map" aria-label="Open the Experience Centre map" title="Experience Centre map" hidden></button>
+    <button type="button" class="ks-map" aria-label="Open the photo collection camera" title="Photo collection" hidden></button>
+  </div>
   <script src="guide/gmc-guide.js"></script>
   <script src="kiosk/kiosk.js"></script>
   <script>
@@ -72,9 +75,12 @@
       intro: document.getElementById('intro'),
       guide: document.getElementById('guide'),
       restart: document.querySelector('.ks-restart'),
-      mapButton: document.querySelector('.ks-map'),
-      // The venue map is the Next.js app in Mindu-Agent-/web (npm run dev → port 3000).
-      mapUrl: 'http://localhost:3000/map',
+      // The map and the photo collection live in the Next.js app in Mindu-Agent-/web
+      // (npm run dev → port 3000). Change these addresses when deploying.
+      links: [
+        { id: 'map', button: document.querySelectorAll('.ks-map')[0], url: 'http://localhost:3000/map', label: 'Opening the Experience Centre map…' },
+        { id: 'photo', button: document.querySelectorAll('.ks-map')[1], url: 'http://localhost:3000/photo', label: 'Opening the camera…', dark: true },
+      ],
       mountGuide,
     });
   </script>

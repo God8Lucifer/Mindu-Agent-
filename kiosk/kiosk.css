@@ -166,10 +166,16 @@
 }
 
 /* ---- map button (top right of the chat) and the reveal into the map ---- */
-.ks-map {
+.ks-side {
   position: fixed;
   top: 16px;
   right: 16px;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.ks-map {
   width: 46px;
   height: 46px;
   border-radius: 50%;
@@ -223,3 +229,8 @@
   stroke-linecap: round;
 }
 .ks-veil-back .ks-veil-inner { display: none; }
+
+/* transition into a page that uses the dark agent theme (photo collection) */
+.ks-veil-dark { background: #12172a; box-shadow: inset 0 0 0 1px #343c5c; }
+.ks-veil-dark .ks-veil-inner { color: #e9e4d8; }
+.ks-veil-dark .ks-veil-inner svg { color: #e8874a; }
