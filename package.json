@@ -9,5 +9,7 @@
     "test": "node --test backend/test/*.test.js",
     "build": "node scripts/build.cjs"
   },
-  "engines": { "node": ">=22" }
+  "engines": {
+    "node": ">=22"
+  }
 }
