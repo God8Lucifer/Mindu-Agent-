@@ -1,14 +1,24 @@
 {
   "name": "mindu",
   "private": true,
-  "description": "Mindu — Gelephu Mindfulness City visitor experience (Next.js frontend + AI backend)",
+  "description": "Mindu \u2014 Gelephu Mindfulness City visitor experience (Next.js frontend + AI backend)",
   "scripts": {
-    "dev": "node scripts/dev.js",
+    "dev": "next dev frontend",
     "frontend": "npm --prefix frontend run dev",
     "backend": "node backend/src/server.js",
-    "test": "npm --prefix backend test"
+    "test": "npm --prefix backend test",
+    "build": "next build frontend",
+    "start": "next start frontend"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
+  },
+  "workspaces": [
+    "frontend"
+  ],
+  "dependencies": {
+    "next": "16.4.6",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
   }
 }

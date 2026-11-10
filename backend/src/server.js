@@ -28,8 +28,8 @@ function send(res, status, data) {
   });
   res.end(JSON.stringify(data));
 }
-const server = http.createServer(async (req, res) => {
-  const path = new URL(req.url, `http://${req.headers.host || 'localhost'}`).pathname;
+async function handler(req, res) {
+  const path = new URL(req.url, 'http://localhost').pathname;
   if (req.method === 'OPTIONS') return send(res, 204, {});
   if (req.method === 'GET' && path === '/api/health') return send(res, 200, {
     ok: true, mode: process.env.OPENAI_API_KEY?.trim() ? 'live-ai' : 'guided-demo', webSearch: process.env.ENABLE_WEB_SEARCH !== 'false', model: process.env.OPENAI_MODEL || 'gpt-4.1-mini'
@@ -58,9 +58,10 @@ const server = http.createServer(async (req, res) => {
     try {
       for await (const chunk of req) {
         body += chunk;
-        if (body.length > 5000) return send(res, 413, { error: 'Request too large' });
+        if (Buffer.byteLength(body) > 5000) return send(res, 413, { error: 'Request too large' });
       }
       const input = JSON.parse(body);
+      if (!input || typeof input !== 'object' || Array.isArray(input)) return send(res, 400, { error: 'Expected a JSON object.' });
       const question = input?.question;
       if (typeof question !== 'string' || question.trim().length < 2 || question.length > 400) return send(res, 400, { error: 'Question must contain 2–400 characters.' });
       const chamberId = String(input?.chamberId ?? 'reception');
@@ -79,8 +80,9 @@ const server = http.createServer(async (req, res) => {
     }
   }
   send(res, 404, { error: 'Not found' });
-});
-if (process.env.NODE_ENV !== 'test') server.listen(PORT, '0.0.0.0', () => {
+}
+const server = http.createServer(handler);
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url) && process.env.NODE_ENV !== 'test') server.listen(PORT, '0.0.0.0', () => {
   console.log(`GMC API listening on ${PORT}; mode=${process.env.OPENAI_API_KEY?.trim() ? 'live-ai' : 'guided-demo'}`);
 });
-export { server };
+export { server, handler };

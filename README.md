@@ -13,17 +13,17 @@ frontend/                 Next.js app — the whole site, on one port (3000)
   src/app/mindu/          Mindu chat page (React)      → /mindu
   next.config.ts          serves the agent at /, forwards /api/* to the backend
 backend/                  GMC AI backend (Node, OpenAI) — internal, port 3001
-scripts/dev.js            starts backend + frontend together
+scripts/dev.js            compatibility launcher for the integrated Next.js app
 assets/logo/              GMC logo exports (SVG + 4096px PNG)
 legacy/                   original dependency-free prototype (kept for reference)
 ```
 
 ## Run it
 
-Requires Node.js 20+.
+Requires Node.js 22+.
 
 1. Copy `.env.example` to `.env` and add your `OPENAI_API_KEY` (without a key the backend runs in a limited demo mode).
-2. First time only: `cd frontend && npm install`
+2. First time only: `npm install`
 3. From the repo root:
 
 ```bash
@@ -37,9 +37,9 @@ Open **http://localhost:3000**. Everything is on this one address:
 | `/` | Mindu agent |
 | `/map` | Experience Centre map |
 | `/photo` | Camera / photo collection |
-| `/api/*` | AI backend (forwarded by Next.js; visitors never open port 3001) |
+| `/api/*` | AI backend (served directly by Next.js) |
 
-`npm run dev` runs the backend on internal port 3001 (change with `API_PORT`). To run them separately: `npm run backend` and `npm run frontend`. Backend tests: `npm test`.
+`npm run dev` serves the frontend and AI API in one Next.js process. No `API_URL` or separate backend server is required. `npm run backend` remains available for standalone backend development. Backend tests: `npm test`. Production build: `npm run build`, then `npm start`.
 
 ---
 
@@ -72,3 +72,11 @@ Mindu is an AI guide for Gelephu Mindfulness City. Instead of a mascot, the guid
 - `transcribe(blob)` → `POST /api/transcribe` (used for the mic only when the browser has no built-in speech recognition)
 
 The original prototype (booking → ticket → reception → postcard) now lives in [`legacy/prototype/`](legacy/prototype/README.md).
+
+## Vercel deployment
+
+Deploy this repository with Root Directory left at the repository root (`.`), not `frontend` or the local wrapper folder `GMC-Lumi-AI`. The committed `vercel.json` selects Next.js, runs `npm ci` and `npm run build`, and uses `frontend/.next` as output.
+
+Set Node.js to 22.x and add `OPENAI_API_KEY` to the deployment environment for live answers. The backend modules are bundled into the Next.js API function, so no external backend URL is required. The API function requests a 90-second duration; the hosting plan must support it. Platform upload limits still apply to voice recordings.
+
+After merging this branch into `main`, redeploy the latest commit. Verify `/`, `/map`, `/photo`, and `/api/health`. `/api/health` reports `guided-demo` without a key and `live-ai` with a key. Do not put the API key in frontend code or `NEXT_PUBLIC_*` variables.
