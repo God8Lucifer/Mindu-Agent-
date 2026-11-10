@@ -3,18 +3,19 @@
 ## Project structure
 
 ```
-agent/          Mindu agent UI (vanilla JS): animated GMC-logo guide + chat
-  index.html    the agent page; side buttons open the map and the camera
-  guide/        the guide (logo animations, chat, voice)
-  kiosk/        kiosk flow + map/camera buttons with reveal transition
-  serve.js      dev server (port 4321), proxies /api/* to the backend
-backend/        GMC AI backend (Node, OpenAI) on port 3001
-web/            Next.js visitor app on port 3000
-  src/app/map     3D Experience Centre map   → /map
-  src/app/photo   photo collection / camera  → /photo
-  src/app/mindu   Mindu chat page            → /mindu
-assets/logo/    GMC logo exports (SVG + 4096px PNG)
-legacy/         original dependency-free prototype (kept for reference)
+frontend/
+  agent/          Mindu agent UI (vanilla JS): animated GMC-logo guide + chat
+    index.html    the agent page; side buttons open the map and the camera
+    guide/        the guide (logo animations, chat, voice)
+    kiosk/        kiosk flow + map/camera buttons with reveal transition
+    serve.js      dev server (port 4321), proxies /api/* to the backend
+  web/            Next.js visitor app on port 3000
+    src/app/map     3D Experience Centre map   → /map
+    src/app/photo   photo collection / camera  → /photo
+    src/app/mindu   Mindu chat page            → /mindu
+backend/          GMC AI backend (Node, OpenAI) on port 3001
+assets/logo/      GMC logo exports (SVG + 4096px PNG)
+legacy/           original dependency-free prototype (kept for reference)
 ```
 
 ## Run it
@@ -26,10 +27,10 @@ Run each in its own terminal, from the repo root:
 ```bash
 npm run backend   # AI backend   → http://localhost:3001
 npm run agent     # agent UI     → http://localhost:4321
-npm run web       # map + camera → http://localhost:3000  (first time: cd web && npm install)
+npm run web       # map + camera → http://localhost:3000  (first time: cd frontend/web && npm install)
 ```
 
-The agent's map and camera buttons open `http://localhost:3000/map` and `/photo` (set in `agent/index.html`). Backend tests: `npm test`.
+The agent's map and camera buttons open `http://localhost:3000/map` and `/photo` (set in `frontend/agent/index.html`). Backend tests: `npm test`.
 
 ---
 
@@ -49,14 +50,14 @@ Mindu is an AI guide for Gelephu Mindfulness City. Instead of a mascot, the guid
 
 ## Files
 
-- `agent/guide/gmc-guide.js` — the guide (`MinduGuide.mount(element, options)`)
-- `agent/guide/gmc-guide.css` — logo animations and chat styles (light and dark)
-- `agent/kiosk/` — kiosk flow: splash, intro, QR hand-off, and the side buttons (map, camera)
-- `agent/index.html` — the agent page
+- `frontend/agent/guide/gmc-guide.js` — the guide (`MinduGuide.mount(element, options)`)
+- `frontend/agent/guide/gmc-guide.css` — logo animations and chat styles (light and dark)
+- `frontend/agent/kiosk/` — kiosk flow: splash, intro, QR hand-off, and the side buttons (map, camera)
+- `frontend/agent/index.html` — the agent page
 
 ## How the UI talks to the AI
 
-`agent/index.html` passes two functions to `MinduGuide.mount`:
+`frontend/agent/index.html` passes two functions to `MinduGuide.mount`:
 
 - `answer(question, history)` → `POST /api/chat` → `{ text, sources }` (sources show as links under the reply)
 - `transcribe(blob)` → `POST /api/transcribe` (used for the mic only when the browser has no built-in speech recognition)

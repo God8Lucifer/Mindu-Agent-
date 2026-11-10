@@ -2,7 +2,7 @@
 
 The Next.js + React + TypeScript version of Mindu. So far it contains the
 **3D venue map** and the animated Mindu guide. Booking and ticket handoff
-still run from the original prototype in `../legacy/prototype/server.js`.
+still run from the original prototype in `../../legacy/prototype/server.js`.
 
 ## Run
 

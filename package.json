@@ -3,9 +3,9 @@
   "private": true,
   "description": "Mindu — Gelephu Mindfulness City visitor experience (agent UI, AI backend, web app)",
   "scripts": {
-    "agent": "node agent/serve.js",
+    "agent": "node frontend/agent/serve.js",
     "backend": "node backend/src/server.js",
-    "web": "npm --prefix web run dev",
+    "web": "npm --prefix frontend/web run dev",
     "test": "npm --prefix backend test"
   },
   "engines": {

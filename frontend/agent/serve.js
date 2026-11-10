@@ -1,4 +1,4 @@
-// Dev server for the Mindu agent: `node agent/serve.js` → http://localhost:4321
+// Dev server for the Mindu agent: `node frontend/agent/serve.js` → http://localhost:4321
 // Serves the static UI and forwards /api/* to the GMC AI backend (backend/, port 3001).
 const http = require('http');
 const fs = require('fs');
@@ -6,7 +6,7 @@ const path = require('path');
 
 const PORT = process.env.PORT || 4321;
 const API = new URL(process.env.API_URL || 'http://localhost:3001');
-const ROOT = __dirname; // agent/ — only the agent UI is served
+const ROOT = __dirname; // frontend/agent/ — only the agent UI is served
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml' };
 
 function proxy(req, res) {
