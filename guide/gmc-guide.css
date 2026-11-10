@@ -58,23 +58,35 @@
 @keyframes mg-breathe { 50% { transform: scale(1.025); } }
 @keyframes mg-flow { to { stroke-dashoffset: -1; } }
 
-/* listening: frame pulses, ripples spread */
+/* listening: frame pulses */
 [data-state='listening'] .mg-frame { stroke: var(--mg-hot); animation: mg-pulse 1.2s ease-in-out infinite; }
 @keyframes mg-pulse { 50% { opacity: 0.35; } }
+
+/* resonance: circular waves rising from behind the logo.
+   Always on; faster and stronger while listening or speaking. */
+.mg-logo { position: relative; z-index: 1; }
 .mg-ring {
   position: absolute;
-  inset: 22px;
+  inset: 10px;
+  border-radius: 50%;
   border: 2px solid var(--mg-hot);
+  background: color-mix(in srgb, var(--mg-hot) 8%, transparent);
   opacity: 0;
-  transform: rotate(45deg);
   pointer-events: none;
+  --mg-wave: 4.8s;
+  --mg-peak: 0.28;
+  animation: mg-ripple var(--mg-wave) ease-out infinite;
 }
-[data-state='listening'] .mg-ring { animation: mg-ripple 1.8s ease-out infinite; }
-[data-state='listening'] .mg-ring:nth-child(2) { animation-delay: 0.6s; }
-[data-state='listening'] .mg-ring:nth-child(3) { animation-delay: 1.2s; }
+.mg-ring:nth-child(2) { animation-delay: calc(var(--mg-wave) / -3); }
+.mg-ring:nth-child(3) { animation-delay: calc(var(--mg-wave) / -1.5); }
+[data-state='listening'] .mg-ring { --mg-wave: 2.1s; --mg-peak: 0.6; }
+[data-state='speaking'] .mg-ring { --mg-wave: 1.4s; --mg-peak: 0.5; }
+[data-state='thinking'] .mg-ring { --mg-wave: 3.2s; --mg-peak: 0.3; }
+[data-state='wake'] .mg-ring { animation: none; }
 @keyframes mg-ripple {
-  from { opacity: 0.7; transform: rotate(45deg) scale(0.7); }
-  to { opacity: 0; transform: rotate(45deg) scale(1.15); }
+  0% { opacity: 0; transform: scale(0.75); }
+  15% { opacity: var(--mg-peak); }
+  100% { opacity: 0; transform: scale(1.45); }
 }
 
 /* thinking: a spark runs through every line */
