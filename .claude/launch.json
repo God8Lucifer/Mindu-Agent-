@@ -2,22 +2,13 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "mindu-api",
+      "name": "mindu",
       "runtimeExecutable": "node",
-      "runtimeArgs": ["backend/src/server.js"],
-      "port": 3001
-    },
-    {
-      "name": "mindu-guide",
-      "runtimeExecutable": "node",
-      "runtimeArgs": ["frontend/agent/serve.js"],
-      "port": 4321
-    },
-    {
-      "name": "mindu-web",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["--prefix", "frontend/web", "run", "dev"],
-      "port": 3000
+      "runtimeArgs": [
+        "scripts/dev.js"
+      ],
+      "port": 3000,
+      "autoPort": false
     }
   ]
 }

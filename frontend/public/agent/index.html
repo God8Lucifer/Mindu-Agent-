@@ -4,8 +4,8 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Mindu Guide</title>
-  <link rel="stylesheet" href="guide/gmc-guide.css" />
-  <link rel="stylesheet" href="kiosk/kiosk.css" />
+  <link rel="stylesheet" href="/agent/guide/gmc-guide.css" />
+  <link rel="stylesheet" href="/agent/kiosk/kiosk.css" />
   <style>
     body {
       margin: 0;
@@ -27,10 +27,10 @@
     <button type="button" class="ks-map" aria-label="Open the Experience Centre map" title="Experience Centre map" hidden></button>
     <button type="button" class="ks-map" aria-label="Open the photo collection camera" title="Photo collection" hidden></button>
   </div>
-  <script src="guide/gmc-guide.js"></script>
-  <script src="kiosk/kiosk.js"></script>
+  <script src="/agent/guide/gmc-guide.js"></script>
+  <script src="/agent/kiosk/kiosk.js"></script>
   <script>
-    // Mindu's answers come from the GMC AI backend (backend/), proxied at /api by serve.js.
+    // Mindu's answers come from the GMC AI backend (backend/), proxied at /api by the Next.js app (frontend/next.config.ts).
     async function api(path, init) {
       const res = await fetch(path, init);
       const data = await res.json().catch(() => ({}));
@@ -66,7 +66,7 @@
       el.appendChild(mode);
       api('/api/health')
         .then((h) => { mode.textContent = h.mode === 'live-ai' ? 'Live GMC AI connected' : 'Demo mode — add OPENAI_API_KEY to .env for full answers'; })
-        .catch(() => { mode.textContent = 'AI backend offline — start it with: node backend/src/server.js'; });
+        .catch(() => { mode.textContent = 'AI backend offline — start it with: npm run dev (repo root)'; });
       return window.guide;
     }
 
@@ -75,11 +75,10 @@
       intro: document.getElementById('intro'),
       guide: document.getElementById('guide'),
       restart: document.querySelector('.ks-restart'),
-      // The map and the photo collection live in the Next.js app in frontend/web
-      // (npm run dev → port 3000). Change these addresses when deploying.
+      // The map and the photo collection are pages of this same Next.js app.
       links: [
-        { id: 'map', button: document.querySelectorAll('.ks-map')[0], url: 'http://localhost:3000/map', label: 'Opening the Experience Centre map…' },
-        { id: 'photo', button: document.querySelectorAll('.ks-map')[1], url: 'http://localhost:3000/photo', label: 'Opening the camera…', dark: true },
+        { id: 'map', button: document.querySelectorAll('.ks-map')[0], url: '/map', label: 'Opening the Experience Centre map…' },
+        { id: 'photo', button: document.querySelectorAll('.ks-map')[1], url: '/photo', label: 'Opening the camera…', dark: true },
       ],
       mountGuide,
     });

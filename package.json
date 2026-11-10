@@ -1,11 +1,11 @@
 {
   "name": "mindu",
   "private": true,
-  "description": "Mindu — Gelephu Mindfulness City visitor experience (agent UI, AI backend, web app)",
+  "description": "Mindu — Gelephu Mindfulness City visitor experience (Next.js frontend + AI backend)",
   "scripts": {
-    "agent": "node frontend/agent/serve.js",
+    "dev": "node scripts/dev.js",
+    "frontend": "npm --prefix frontend run dev",
     "backend": "node backend/src/server.js",
-    "web": "npm --prefix frontend/web run dev",
     "test": "npm --prefix backend test"
   },
   "engines": {

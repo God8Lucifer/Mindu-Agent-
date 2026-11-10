@@ -1,17 +1,17 @@
-# Mindu web (Next.js)
+# Mindu frontend (Next.js)
 
 The Next.js + React + TypeScript version of Mindu. So far it contains the
 **3D venue map** and the animated Mindu guide. Booking and ticket handoff
-still run from the original prototype in `../../legacy/prototype/server.js`.
+still run from the original prototype in `../legacy/prototype/server.js`.
 
 ## Run
 
 ```sh
 npm install
-npm run dev
 ```
 
-Open `http://localhost:3000/map`.
+Then run `npm run dev` from the repo root (starts this app and the AI backend) and open `http://localhost:3000`.
+The Mindu agent is served at `/` from `public/agent/`; the map is at `/map`.
 
 Open `http://localhost:3000/mindu` for the animated voice guide. The map also has
 a **Meet Mindu** link and passes the current chamber to the guide.

@@ -3,34 +3,43 @@
 ## Project structure
 
 ```
-frontend/
-  agent/          Mindu agent UI (vanilla JS): animated GMC-logo guide + chat
-    index.html    the agent page; side buttons open the map and the camera
-    guide/        the guide (logo animations, chat, voice)
-    kiosk/        kiosk flow + map/camera buttons with reveal transition
-    serve.js      dev server (port 4321), proxies /api/* to the backend
-  web/            Next.js visitor app on port 3000
-    src/app/map     3D Experience Centre map   → /map
-    src/app/photo   photo collection / camera  → /photo
-    src/app/mindu   Mindu chat page            → /mindu
-backend/          GMC AI backend (Node, OpenAI) on port 3001
-assets/logo/      GMC logo exports (SVG + 4096px PNG)
-legacy/           original dependency-free prototype (kept for reference)
+frontend/                 Next.js app — the whole site, on one port (3000)
+  public/agent/           Mindu agent (plain JS): animated GMC-logo guide + chat  → /
+    index.html            the agent page; side buttons open the map and the camera
+    guide/                the guide (logo animations, chat, voice)
+    kiosk/                kiosk flow + map/camera buttons with reveal transition
+  src/app/map/            3D Experience Centre map    → /map
+  src/app/photo/          photo collection / camera   → /photo
+  src/app/mindu/          Mindu chat page (React)      → /mindu
+  next.config.ts          serves the agent at /, forwards /api/* to the backend
+backend/                  GMC AI backend (Node, OpenAI) — internal, port 3001
+scripts/dev.js            starts backend + frontend together
+assets/logo/              GMC logo exports (SVG + 4096px PNG)
+legacy/                   original dependency-free prototype (kept for reference)
 ```
 
 ## Run it
 
-Requires Node.js 20+. Copy `.env.example` to `.env` and add your `OPENAI_API_KEY` (without a key the backend runs in a limited demo mode).
+Requires Node.js 20+.
 
-Run each in its own terminal, from the repo root:
+1. Copy `.env.example` to `.env` and add your `OPENAI_API_KEY` (without a key the backend runs in a limited demo mode).
+2. First time only: `cd frontend && npm install`
+3. From the repo root:
 
 ```bash
-npm run backend   # AI backend   → http://localhost:3001
-npm run agent     # agent UI     → http://localhost:4321
-npm run web       # map + camera → http://localhost:3000  (first time: cd frontend/web && npm install)
+npm run dev
 ```
 
-The agent's map and camera buttons open `http://localhost:3000/map` and `/photo` (set in `frontend/agent/index.html`). Backend tests: `npm test`.
+Open **http://localhost:3000**. Everything is on this one address:
+
+| Address | Page |
+| --- | --- |
+| `/` | Mindu agent |
+| `/map` | Experience Centre map |
+| `/photo` | Camera / photo collection |
+| `/api/*` | AI backend (forwarded by Next.js; visitors never open port 3001) |
+
+`npm run dev` runs the backend on internal port 3001 (change with `API_PORT`). To run them separately: `npm run backend` and `npm run frontend`. Backend tests: `npm test`.
 
 ---
 
@@ -50,14 +59,14 @@ Mindu is an AI guide for Gelephu Mindfulness City. Instead of a mascot, the guid
 
 ## Files
 
-- `frontend/agent/guide/gmc-guide.js` — the guide (`MinduGuide.mount(element, options)`)
-- `frontend/agent/guide/gmc-guide.css` — logo animations and chat styles (light and dark)
-- `frontend/agent/kiosk/` — kiosk flow: splash, intro, QR hand-off, and the side buttons (map, camera)
-- `frontend/agent/index.html` — the agent page
+- `frontend/public/agent/guide/gmc-guide.js` — the guide (`MinduGuide.mount(element, options)`)
+- `frontend/public/agent/guide/gmc-guide.css` — logo animations and chat styles (light and dark)
+- `frontend/public/agent/kiosk/` — kiosk flow: splash, intro, QR hand-off, and the side buttons (map, camera)
+- `frontend/public/agent/index.html` — the agent page
 
 ## How the UI talks to the AI
 
-`frontend/agent/index.html` passes two functions to `MinduGuide.mount`:
+`frontend/public/agent/index.html` passes two functions to `MinduGuide.mount`:
 
 - `answer(question, history)` → `POST /api/chat` → `{ text, sources }` (sources show as links under the reply)
 - `transcribe(blob)` → `POST /api/transcribe` (used for the mic only when the browser has no built-in speech recognition)
