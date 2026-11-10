@@ -150,6 +150,8 @@
 .dock .dockOn { border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink), var(--shadow); }
 .dock .dockGuide { display: inline-flex; align-items: center; border: 1px solid var(--gold); background: var(--ink); color: var(--primary-foreground); border-radius: var(--radius); padding: 11px 16px; font-weight: 800; font-size: 12px; letter-spacing: .05em; text-decoration: none; box-shadow: var(--shadow); }
 .dock .dockGuide:hover { background: var(--body); }
+.dock .dockPhoto { display: inline-flex; align-items: center; border: 1px solid var(--line); background: var(--card-bg); color: var(--ink); border-radius: var(--radius); padding: 11px 16px; font-weight: 700; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; text-decoration: none; box-shadow: var(--shadow); }
+.dock .dockPhoto:hover { border-color: var(--gold); }
 
 /* ---------- find / search panel ---------- */
 .panel {
@@ -235,7 +237,10 @@
 
 /* ---------- phone ---------- */
 @media (max-width: 720px) {
-  .dock .dockGuide { padding: 10px 11px; font-size: 11px; }
+  .dock .dockGuide, .dock .dockPhoto { padding: 10px 11px; font-size: 11px; }
+  .dock { right: 16px; gap: 6px; }
+  .dock > * { flex: 1 1 auto; justify-content: center; }
+  .dock button { padding: 10px 8px; }
   .header { flex-direction: column; align-items: stretch; gap: 8px; }
   .brand { align-self: flex-start; }
   .progress { justify-content: space-between; font-size: 12px; }

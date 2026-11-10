@@ -349,6 +349,7 @@ export default function VenueMap() {
       <div className={styles.dock}>
         <button type="button" className={panel === 'find' ? styles.dockOn : ''} onClick={() => setPanel(p => (p === 'find' ? null : 'find'))}>☰ Find</button>
         <button type="button" className={panel === 'search' ? styles.dockOn : ''} onClick={() => setPanel(p => (p === 'search' ? null : 'search'))}>⌕ Search</button>
+        <a className={styles.dockPhoto} href={`/photo${currentId && chamberIds.includes(currentId) ? `?place=${currentId}` : ''}`} aria-label="Photo collection">◉ Photos</a>
         <a className={styles.dockGuide} href={backToMindu ?? `/mindu?place=${currentId && chamberIds.includes(currentId) ? currentId : 'chamber1'}`}>{backToMindu ? '← Back to Mindu' : '✦ Meet Mindu'}</a>
       </div>
 
