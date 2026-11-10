@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mindu Guide</title>
+  <link rel="stylesheet" href="guide/gmc-guide.css" />
+  <link rel="stylesheet" href="kiosk/kiosk.css" />
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px 16px;
+      box-sizing: border-box;
+      background: #faf7f0;
+    }
+    @media (prefers-color-scheme: dark) { body { background: #12172a; } }
+  </style>
+</head>
+<body>
+  <div id="intro" hidden></div>
+  <main id="guide" hidden></main>
+  <button type="button" class="ks-restart" hidden>↺ Start over</button>
+  <button type="button" class="ks-map" aria-label="Open the Experience Centre map" title="Experience Centre map" hidden></button>
+  <script src="guide/gmc-guide.js"></script>
+  <script src="kiosk/kiosk.js"></script>
+  <script>
+    // Mindu's answers come from the GMC AI backend (backend/), proxied at /api by serve.js.
+    async function api(path, init) {
+      const res = await fetch(path, init);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw Object.assign(new Error(data.error || `HTTP ${res.status}`), { userMessage: data.error });
+      return data;
+    }
+
+    function mountGuide(el, extra) {
+      window.guide = MinduGuide.mount(el, {
+        ...extra,
+        answer: async (question, history) => {
+          const data = await api('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ question, history, chamberId: 'reception', audience: 'general' }),
+          });
+          return { text: data.answer, sources: data.sources };
+        },
+        transcribe: async (blob) => {
+          const data = await api('/api/transcribe', {
+            method: 'POST',
+            headers: { 'Content-Type': blob.type.split(';')[0] || 'audio/webm' },
+            body: blob,
+          });
+          return data.text;
+        },
+        suggestions: ['What is GMC?', 'Who leads GMC?', 'What are the economic sectors?'],
+      });
+
+      // Show which brain is connected.
+      const mode = document.createElement('p');
+      mode.className = 'mg-mode';
+      el.appendChild(mode);
+      api('/api/health')
+        .then((h) => { mode.textContent = h.mode === 'live-ai' ? 'Live GMC AI connected' : 'Demo mode — add OPENAI_API_KEY to .env for full answers'; })
+        .catch(() => { mode.textContent = 'AI backend offline — start it with: node backend/src/server.js'; });
+      return window.guide;
+    }
+
+    // Kiosk flow: logo splash → QR / continue as guest → chat.
+    MinduKiosk.start({
+      intro: document.getElementById('intro'),
+      guide: document.getElementById('guide'),
+      restart: document.querySelector('.ks-restart'),
+      mapButton: document.querySelector('.ks-map'),
+      // The venue map is the Next.js app in Mindu-Agent-/web (npm run dev → port 3000).
+      mapUrl: 'http://localhost:3000/map',
+      mountGuide,
+    });
+  </script>
+</body>
+</html>
