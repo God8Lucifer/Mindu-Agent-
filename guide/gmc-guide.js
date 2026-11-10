@@ -275,6 +275,16 @@
     // opts.wake === false skips the draw (the intro already drew it);
     // opts.autoGreet === false waits for an explicit greet() call.
     let greeted = false;
+
+    // opts.restore: an earlier conversation ([{ role, content }]) shown without typing.
+    const restore = Array.isArray(opts.restore) ? opts.restore : [];
+    restore.forEach((m) => {
+      if (!m || typeof m.content !== 'string' || (m.role !== 'user' && m.role !== 'assistant')) return;
+      addMessage(m.role === 'user' ? 'user' : 'bot', m.content);
+      history.push({ role: m.role, content: m.content });
+    });
+    if (history.length) { greeted = true; chips.hidden = true; }
+
     async function greet() {
       if (greeted) return;
       greeted = true;
@@ -291,7 +301,7 @@
       })();
     }
 
-    return { setState, ask, greet, get state() { return state; } };
+    return { setState, ask, greet, transcript: () => history.slice(), get state() { return state; } };
   }
 
   window.MinduGuide = { mount, logoSvg };

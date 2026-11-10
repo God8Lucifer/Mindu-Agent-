@@ -23,6 +23,7 @@
   <div id="intro" hidden></div>
   <main id="guide" hidden></main>
   <button type="button" class="ks-restart" hidden>↺ Start over</button>
+  <button type="button" class="ks-map" aria-label="Open the Experience Centre map" title="Experience Centre map" hidden></button>
   <script src="guide/gmc-guide.js"></script>
   <script src="kiosk/kiosk.js"></script>
   <script>
@@ -71,6 +72,9 @@
       intro: document.getElementById('intro'),
       guide: document.getElementById('guide'),
       restart: document.querySelector('.ks-restart'),
+      mapButton: document.querySelector('.ks-map'),
+      // The venue map is the Next.js app in Mindu-Agent-/web (npm run dev → port 3000).
+      mapUrl: 'http://localhost:3000/map',
       mountGuide,
     });
   </script>
