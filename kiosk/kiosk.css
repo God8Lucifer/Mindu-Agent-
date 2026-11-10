@@ -1,0 +1,166 @@
+/* Kiosk intro: splash → welcome (QR / guest) → chat. Uses the guide's colour tokens (.mg). */
+.ks {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  max-width: none;
+  justify-content: center;
+  gap: 0;
+  padding: 24px 16px;
+  box-sizing: border-box;
+  --ks-ease: cubic-bezier(0.65, 0, 0.25, 1);
+}
+.ks[hidden] { display: none; }
+
+/* ---- hero: the logo ---- */
+.ks-hero { display: flex; flex-direction: column; align-items: center; }
+.ks .ks-stage {
+  width: min(58vmin, 440px);
+  height: min(58vmin, 440px);
+  transition: width 0.9s var(--ks-ease), height 0.9s var(--ks-ease);
+}
+.ks .ks-stage .mg-logo { width: 80%; height: 80%; }
+.ks .ks-stage .mg-ring { inset: 4%; }
+.ks:not([data-step='splash']) .ks-stage { width: min(30vmin, 200px); height: min(30vmin, 200px); }
+
+.ks-title {
+  margin: 18px 0 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: 30px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  opacity: 0;
+  animation: ks-fade 0.8s ease-out 1.8s both;
+  transition: opacity 0.4s, font-size 0.9s var(--ks-ease), margin 0.9s var(--ks-ease);
+}
+.ks-title span { font-size: 15px; font-weight: 400; color: var(--mg-muted); letter-spacing: 0; }
+.ks:not([data-step='splash']) .ks-title { font-size: 22px; margin-top: 8px; }
+
+/* ---- welcome: QR + guest ---- */
+.ks-welcome {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows 0.9s var(--ks-ease), opacity 0.5s ease-out;
+}
+.ks-welcome-inner {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  min-height: 0;
+}
+.ks[data-step='welcome'] .ks-welcome,
+.ks[data-step='leaving'] .ks-welcome,
+.ks[data-step='handoff'] .ks-welcome { grid-template-rows: 1fr; }
+.ks[data-step='welcome'] .ks-welcome { opacity: 1; transition-delay: 0s, 0.35s; }
+.ks[data-step='handoff'] .ks-welcome { opacity: 1; }
+
+.ks-qr {
+  margin-top: 28px;
+  width: 168px;
+  height: 168px;
+  padding: 10px;
+  border-radius: 18px;
+  border: 1px solid var(--mg-border);
+  background: #fff;
+  cursor: pointer;
+  box-shadow: 0 6px 24px rgba(20, 24, 50, 0.12);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.ks-qr:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(20, 24, 50, 0.18); }
+.ks-qr svg { display: block; width: 100%; height: 100%; }
+.ks-qr-pulse { animation: ks-pulse 1s ease-out; box-shadow: 0 0 0 4px var(--mg-hot); }
+.ks-qr-label { margin: 6px 0 0; font-size: 16px; font-weight: 600; }
+.ks-qr-hint { margin: 0; font-size: 12px; color: var(--mg-muted); }
+.ks-or {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 220px;
+  margin: 8px 0 2px;
+  color: var(--mg-muted);
+  font-size: 13px;
+}
+.ks-or::before, .ks-or::after { content: ''; flex: 1; height: 1px; background: var(--mg-border); }
+.ks-guest {
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  padding: 12px 28px;
+  border-radius: 999px;
+  border: 0;
+  background: var(--mg-hot);
+  color: #fff;
+  cursor: pointer;
+  margin-bottom: 4px;
+  transition: transform 0.2s, filter 0.2s;
+}
+.ks-guest:hover { transform: translateY(-1px); filter: brightness(1.05); }
+
+/* leaving for the chat: everything but the logo fades */
+.ks[data-step='leaving'] .ks-title,
+.ks[data-step='leaving'] .ks-welcome,
+.ks[data-step='handoff'] .ks-title,
+.ks[data-step='handoff'] .ks-qr-hint,
+.ks[data-step='handoff'] .ks-or,
+.ks[data-step='handoff'] .ks-guest { opacity: 0; transition: opacity 0.35s; pointer-events: none; }
+.ks[data-step='handoff'] .ks-title { animation: none; }
+
+/* ---- sent to phone ---- */
+.ks-done { display: none; flex-direction: column; align-items: center; text-align: center; gap: 6px; }
+.ks[data-step='sent'] .ks-hero,
+.ks[data-step='sent'] .ks-welcome { display: none; }
+.ks[data-step='sent'] .ks-done { display: flex; animation: ks-fade 0.6s ease-out both; }
+.ks-check {
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--mg-hot);
+  margin-bottom: 10px;
+  animation: ks-pop 0.6s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+.ks-check svg { width: 44px; height: 44px; fill: none; stroke: #fff; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+.ks-check path { stroke-dasharray: 24; stroke-dashoffset: 24; animation: ks-tick 0.5s ease-out 0.35s forwards; }
+.ks-done-title { margin: 0; font-size: 24px; font-weight: 600; }
+.ks-done-sub { margin: 0; font-size: 15px; color: var(--mg-muted); }
+
+/* ---- chat entrance ---- */
+#guide.ks-enter > :not(.mg-stage) { opacity: 0; }
+#guide.ks-in > :not(.mg-stage) { animation: ks-rise 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+#guide.ks-in > :nth-child(3) { animation-delay: 0.06s; }
+#guide.ks-in > :nth-child(4) { animation-delay: 0.12s; }
+#guide.ks-in > :nth-child(5) { animation-delay: 0.18s; }
+#guide.ks-in > :nth-child(6) { animation-delay: 0.24s; }
+#guide.ks-in > :nth-child(n + 7) { animation-delay: 0.3s; }
+
+.ks-restart {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  font: 13px system-ui, -apple-system, 'Segoe UI', sans-serif;
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1px solid #e2ddd0;
+  background: transparent;
+  color: #646a82;
+  cursor: pointer;
+}
+.ks-restart[hidden] { display: none; }
+@media (prefers-color-scheme: dark) { .ks-restart { border-color: #343c5c; color: #a4aac0; } }
+
+@keyframes ks-fade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes ks-rise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+@keyframes ks-pulse { 0% { transform: scale(1); } 40% { transform: scale(1.06); } 100% { transform: scale(1); } }
+@keyframes ks-pop { from { transform: scale(0.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes ks-tick { to { stroke-dashoffset: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .ks *, #guide.ks-in > * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}

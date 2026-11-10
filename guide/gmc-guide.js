@@ -5,7 +5,9 @@
  *   const guide = MinduGuide.mount(element, { answer: async (question) => 'reply text' });
  *
  * The logo has five states: 'wake' | 'idle' | 'listening' | 'thinking' | 'speaking'.
- * `answer` is where the real AI plugs in. Until then, scripted replies are used.
+ * `answer(question, history)` returns the reply: a string, or { text, sources: [{ title, url }] }.
+ * `transcribe(blob)` (optional) turns recorded audio into text when the browser has no speech recognition.
+ * Without `answer`, scripted replies are used.
  */
 (function () {
   const FRAME = [
@@ -68,6 +70,8 @@
     const answer = opts.answer || scriptedAnswer;
     const voice = opts.voice !== false && 'speechSynthesis' in window;
     const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const canRecord = !Recognition && opts.transcribe && navigator.mediaDevices && window.MediaRecorder;
+    const history = []; // { role: 'user' | 'assistant', content }
 
     root.classList.add('mg');
     root.innerHTML = `
@@ -80,7 +84,7 @@
       <div class="mg-log" role="log" aria-live="polite"></div>
       <div class="mg-chips"></div>
       <form class="mg-input">
-        <button type="button" class="mg-mic" aria-label="Speak to Mindu" ${Recognition ? '' : 'hidden'}>
+        <button type="button" class="mg-mic" aria-label="Speak to Mindu" ${Recognition || canRecord ? '' : 'hidden'}>
           <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
         </button>
         <input type="text" placeholder="Ask Mindu anything…" aria-label="Your question" autocomplete="off" />
@@ -139,6 +143,23 @@
       });
     }
 
+    function addSources(el, sources) {
+      const links = (sources || []).filter((s) => s && /^https:\/\//.test(s.url));
+      if (!links.length) return;
+      const box = document.createElement('div');
+      box.className = 'mg-sources';
+      links.forEach((s) => {
+        const a = document.createElement('a');
+        a.href = s.url;
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        a.textContent = `${s.title || 'GMC source'} ↗`;
+        box.appendChild(a);
+      });
+      el.after(box);
+      log.scrollTop = log.scrollHeight;
+    }
+
     async function ask(question) {
       question = question.trim();
       if (!question || busy) return;
@@ -147,15 +168,20 @@
       addMessage('user', question);
       setState('thinking');
       let reply;
+      let ok = true;
       try {
-        [reply] = await Promise.all([answer(question), wait(900)]);
+        [reply] = await Promise.all([answer(question, history.slice(-8)), wait(900)]);
       } catch (err) {
         console.error('Mindu answer failed', err);
-        reply = "Sorry, I couldn't reach my answers just now. Please try again.";
+        ok = false;
+        reply = err && err.userMessage ? err.userMessage : "Sorry, I couldn't reach my answers just now. Please try again.";
       }
+      const text = typeof reply === 'string' ? reply : (reply && reply.text) || '';
+      if (ok) history.push({ role: 'user', content: question }, { role: 'assistant', content: text });
       setState('speaking');
       const el = addMessage('bot', '');
-      await Promise.all([typeOut(el, reply), speak(reply)]);
+      await Promise.all([typeOut(el, text), speak(text)]);
+      if (reply && reply.sources) addSources(el, reply.sources);
       setState('idle');
       busy = false;
     }
@@ -194,6 +220,45 @@
         rec.onerror = () => rec.stop();
         rec.start();
       });
+    } else if (canRecord) {
+      // No built-in speech recognition: record a clip and send it to `transcribe`.
+      let recorder = null;
+      mic.addEventListener('click', async () => {
+        if (recorder) { recorder.stop(); return; } // second tap stops recording
+        if (busy) return;
+        let stream;
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        } catch {
+          status.textContent = 'Microphone permission was blocked.';
+          return;
+        }
+        const chunks = [];
+        recorder = new MediaRecorder(stream);
+        recorder.ondataavailable = (e) => e.data.size && chunks.push(e.data);
+        recorder.onstop = async () => {
+          stream.getTracks().forEach((t) => t.stop());
+          mic.classList.remove('mg-on');
+          const blob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' });
+          recorder = null;
+          setState('thinking');
+          status.textContent = 'Listening back…';
+          try {
+            const q = await opts.transcribe(blob);
+            if (q && q.trim()) { setState('idle'); ask(q); return; }
+          } catch (err) {
+            console.error('Mindu transcription failed', err);
+            setState('idle');
+            status.textContent = (err && err.userMessage) || "I couldn't hear that. Please type your question.";
+            return;
+          }
+          setState('idle');
+        };
+        mic.classList.add('mg-on');
+        setState('listening');
+        recorder.start();
+        setTimeout(() => recorder && recorder.state === 'recording' && recorder.stop(), 15000);
+      });
     }
 
     const suggestions = opts.suggestions || ['What is GMC?', 'Where should I go?', 'Who are you?'];
@@ -207,17 +272,27 @@
     });
 
     // Wake-up: draw the logo, then greet.
-    setState('wake');
-    (async () => {
-      await wait(reduceMotion ? 0 : 2200);
+    // opts.wake === false skips the draw (the intro already drew it);
+    // opts.autoGreet === false waits for an explicit greet() call.
+    let greeted = false;
+    async function greet() {
+      if (greeted) return;
+      greeted = true;
       setState('speaking');
       const greeting = opts.greeting || "Kuzuzangpo la! I'm Mindu, your guide to Gelephu Mindfulness City.";
       await typeOut(addMessage('bot', ''), greeting);
       setState('idle');
-    })();
+    }
+    setState(opts.wake === false ? 'idle' : 'wake');
+    if (opts.autoGreet !== false) {
+      (async () => {
+        if (opts.wake !== false) await wait(reduceMotion ? 0 : 2200);
+        greet();
+      })();
+    }
 
-    return { setState, ask, get state() { return state; } };
+    return { setState, ask, greet, get state() { return state; } };
   }
 
-  window.MinduGuide = { mount };
+  window.MinduGuide = { mount, logoSvg };
 })();

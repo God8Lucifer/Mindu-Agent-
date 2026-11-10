@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Mindu Guide</title>
   <link rel="stylesheet" href="guide/gmc-guide.css" />
+  <link rel="stylesheet" href="kiosk/kiosk.css" />
   <style>
     body {
       margin: 0;
@@ -19,13 +20,59 @@
   </style>
 </head>
 <body>
-  <main id="guide"></main>
+  <div id="intro" hidden></div>
+  <main id="guide" hidden></main>
+  <button type="button" class="ks-restart" hidden>↺ Start over</button>
   <script src="guide/gmc-guide.js"></script>
+  <script src="kiosk/kiosk.js"></script>
   <script>
-    // Replace `answer` with the real AI call when it's ready, e.g.:
-    //   answer: (q) => fetch('/api/mindu/chat', { method: 'POST', body: JSON.stringify({ q }) })
-    //                    .then((r) => r.json()).then((d) => d.reply)
-    window.guide = MinduGuide.mount(document.getElementById('guide'));
+    // Mindu's answers come from the GMC AI backend (backend/), proxied at /api by serve.js.
+    async function api(path, init) {
+      const res = await fetch(path, init);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw Object.assign(new Error(data.error || `HTTP ${res.status}`), { userMessage: data.error });
+      return data;
+    }
+
+    function mountGuide(el, extra) {
+      window.guide = MinduGuide.mount(el, {
+        ...extra,
+        answer: async (question, history) => {
+          const data = await api('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ question, history, chamberId: 'reception', audience: 'general' }),
+          });
+          return { text: data.answer, sources: data.sources };
+        },
+        transcribe: async (blob) => {
+          const data = await api('/api/transcribe', {
+            method: 'POST',
+            headers: { 'Content-Type': blob.type.split(';')[0] || 'audio/webm' },
+            body: blob,
+          });
+          return data.text;
+        },
+        suggestions: ['What is GMC?', 'Who leads GMC?', 'What are the economic sectors?'],
+      });
+
+      // Show which brain is connected.
+      const mode = document.createElement('p');
+      mode.className = 'mg-mode';
+      el.appendChild(mode);
+      api('/api/health')
+        .then((h) => { mode.textContent = h.mode === 'live-ai' ? 'Live GMC AI connected' : 'Demo mode — add OPENAI_API_KEY to .env for full answers'; })
+        .catch(() => { mode.textContent = 'AI backend offline — start it with: node backend/src/server.js'; });
+      return window.guide;
+    }
+
+    // Kiosk flow: logo splash → QR / continue as guest → chat.
+    MinduKiosk.start({
+      intro: document.getElementById('intro'),
+      guide: document.getElementById('guide'),
+      restart: document.querySelector('.ks-restart'),
+      mountGuide,
+    });
   </script>
 </body>
 </html>

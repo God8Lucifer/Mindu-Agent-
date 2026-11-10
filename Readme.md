@@ -4,11 +4,22 @@ Mindu is an AI guide for Gelephu Mindfulness City. Instead of a mascot, the guid
 
 ## Run it
 
+Mindu's answers come from the GMC AI backend in `backend/` (from the GMC Knowledge Upgrade project: OpenAI Responses API, official GMC source notes, gmc.bt web search, voice transcription).
+
+1. `cp .env.example .env` and add your `OPENAI_API_KEY` (without a key, the backend runs in a limited demo mode).
+2. Start the backend (port 3001):
+
+```bash
+node backend/src/server.js
+```
+
+3. Start the UI (port 4321). It forwards `/api/*` to the backend:
+
 ```bash
 node serve.js
 ```
 
-Then open http://localhost:4321.
+Then open http://localhost:4321. Run backend tests with `cd backend && npm test`.
 
 ## Logo states
 
@@ -26,15 +37,9 @@ Then open http://localhost:4321.
 - `guide/gmc-guide.css` — logo animations and chat styles (light and dark)
 - `index.html` — demo page
 
-## Plugging in the real AI
+## How the UI talks to the AI
 
-Replies are scripted placeholders for now. Pass an `answer` function that returns the reply text:
+`index.html` passes two functions to `MinduGuide.mount`:
 
-```js
-MinduGuide.mount(document.getElementById('guide'), {
-  answer: async (question) => {
-    const res = await fetch('/api/mindu/chat', { method: 'POST', body: JSON.stringify({ question }) });
-    return (await res.json()).reply;
-  },
-});
-```
+- `answer(question, history)` → `POST /api/chat` → `{ text, sources }` (sources show as links under the reply)
+- `transcribe(blob)` → `POST /api/transcribe` (used for the mic only when the browser has no built-in speech recognition)
