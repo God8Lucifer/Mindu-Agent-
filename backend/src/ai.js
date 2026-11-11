@@ -42,6 +42,9 @@ function noKeyAnswer(question, history){
  const contextual = contextualQuestion(question, history);
  if (isFollowUp(question) && !contextual) return 'What would you like to know more about—the city’s vision or an exhibit?';
  const q=contextual.toLowerCase();
+ // A topic keyword alone does not establish a specific fact in demo mode.
+ // Avoid answering a budget/salary/deadline question with generic sector notes.
+ if (/\b(exact|salary|salaries|population|budget|cost|price|fees?|deadline|how much|opening date|completion date)\b/i.test(q)) return unavailable;
  const pairs=[
   [/^(what is|tell me about) (gmc|gelephu mindfulness city)[?!.\s]*$/, 'Gelephu Mindfulness City is a Special Administrative Region in southern Bhutan, with a vision of combining mindfulness, nature and sustainable economic growth.'],
   [/who.*(lead|head|chair|ceo|director)|leadership|who.*(king|in charge)/, 'According to the official GMC Board of Directors page, His Majesty The King chairs the GMC Authority board, while Seow Hiang Lee and Yee Ean Pang are listed as Co-Chief Executive Officers. Current positions should be confirmed at gmc.bt/people.'],

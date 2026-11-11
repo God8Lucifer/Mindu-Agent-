@@ -1,9 +1,12 @@
 import { test, expect } from '@playwright/test';
 import { respond } from '../../backend/src/ai.js';
 
-async function openGuide(page, { recognition = false, mp4 = false } = {}) {
-  await page.addInitScript(({ recognition, mp4 }) => {
+async function openGuide(page, { recognition = false, mp4 = false, secure = true, nativeRecording = false } = {}) {
+  await page.addInitScript(({ recognition, mp4, secure, nativeRecording }) => {
+    if (!secure) Object.defineProperty(window, 'isSecureContext', { configurable: true, value: false });
+    const NativeAudioContext = window.AudioContext || window.webkitAudioContext;
     window.capture = { stopped: 0, recorders: [], recognizers: [], denied: false, bytes: 2000, uploads: [] };
+    window.capture.nativeRecordingAvailable = !!(window.MediaRecorder && NativeAudioContext && NativeAudioContext.prototype.createMediaStreamDestination);
     const originalFetch = window.fetch.bind(window);
     window.fetch = (url, init) => {
       if (url === '/api/transcribe') window.capture.uploads.push({ size: init.body.size, type: init.body.type });
@@ -12,13 +15,22 @@ async function openGuide(page, { recognition = false, mp4 = false } = {}) {
     Object.defineProperty(navigator, 'mediaDevices', { configurable: true, value: {
       getUserMedia: async () => {
         if (window.capture.denied) throw new DOMException('Permission denied', 'NotAllowedError');
+        if (nativeRecording) {
+          const context = new NativeAudioContext();
+          await context.resume();
+          const oscillator = context.createOscillator();
+          const destination = context.createMediaStreamDestination();
+          oscillator.connect(destination); oscillator.start();
+          window.capture.stopTone = () => { oscillator.stop(); context.close(); };
+          return destination.stream;
+        }
         return { getTracks: () => [{ stop: () => window.capture.stopped++ }] };
       },
     } });
     // No analyser is supplied in these event mocks. Real silence detection is
     // covered separately; these bytes simulate a nonempty encoded recording.
     window.AudioContext = window.webkitAudioContext = undefined;
-    window.MediaRecorder = class {
+    if (!nativeRecording) window.MediaRecorder = class {
       static isTypeSupported(type) { return mp4 ? type === 'audio/mp4' : type === 'audio/webm;codecs=opus'; }
       constructor(_, options) { this.mimeType = options?.mimeType || ''; this.state = 'inactive'; window.capture.recorders.push(this); }
       start() { this.state = 'recording'; }
@@ -37,7 +49,7 @@ async function openGuide(page, { recognition = false, mp4 = false } = {}) {
       stop() { queueMicrotask(() => this.onend?.()); }
       abort() { this.onend?.(); }
     } : undefined;
-  }, { recognition, mp4 });
+  }, { recognition, mp4, secure, nativeRecording });
   await page.route('**/agent/kiosk/kiosk.js', route => route.fulfill({ contentType: 'text/javascript', body: 'window.MinduKiosk = { start() {} };' }));
   await page.goto('/');
   await page.evaluate(() => {
@@ -142,15 +154,16 @@ test('spoken and typed GMC question use the same chat path; follow-up retains hi
   await idle(page);
   await say(page, question);
   await say(page, 'Why?');
+  await say(page, 'Tell me more.');
   await say(page, 'Tell me a joke.');
-  expect(requests).toHaveLength(4);
+  expect(requests).toHaveLength(5);
   expect(requests[0].question).toBe(requests[1].question);
   expect(requests[1].history.map(t => t.role)).toEqual(['user', 'assistant']);
   expect(requests[2].history).toHaveLength(4);
   expect(requests.every(r => r.chamberId === 'reception' && r.audience === 'general')).toBe(true);
-  await expect(page.locator('.mg-user')).toHaveText([question, question, 'Why?', 'Tell me a joke.']);
+  await expect(page.locator('.mg-user')).toHaveText([question, question, 'Why?', 'Tell me more.', 'Tell me a joke.']);
   await expect(page.locator('.mg-bot').last()).toContainText('I’m here to help you explore Gelephu Mindfulness City.');
-  await expect(page.locator('.mg-sources a')).toHaveCount(3);
+  await expect(page.locator('.mg-sources a')).toHaveCount(4);
 });
 
 test('recorded fallback selects the supported MIME type, uploads once, blocks duplicate sends, and restores the microphone', async ({ page }, testInfo) => {
@@ -259,4 +272,71 @@ test('upstream GMC branding, theme toggle and microphone opt-out survive integra
   await idle(page);
   expect(requests).toHaveLength(1);
   expect(await page.evaluate(() => window.capture.recognizers.length)).toBe(0);
+});
+
+
+test('insecure mobile connection explains voice availability while keeping typed chat usable', async ({ page }) => {
+  const requests = await mockChat(page);
+  await openGuide(page, { secure: false });
+  await expect(page.locator('.mg-voice-hint')).toContainText('HTTPS');
+  await expect(page.locator('.mg-mic')).toBeHidden();
+  await page.getByRole('textbox', { name: 'Your question' }).fill('What is GMC?');
+  await page.getByRole('button', { name: 'Send', exact: true }).click();
+  await idle(page);
+  expect(requests).toHaveLength(1);
+});
+
+test('restoring a conversation preserves source links and follow-up history without adding sources to the chat payload', async ({ page }) => {
+  const requests = await mockChat(page);
+  await openGuide(page, { recognition: true });
+  await say(page, 'What is GMC?');
+  await expect(page.locator('.mg-sources a')).toHaveCount(1);
+  await page.evaluate(() => {
+    const restore = window.guide.transcript();
+    window.mountGuide(document.querySelector('#guide'), { restore, wake: false, autoGreet: false, voice: false });
+  });
+  await expect(page.locator('.mg-sources a')).toHaveCount(1);
+  await expect(page.locator('.mg-sources a')).toHaveAttribute('href', 'https://gmc.bt/');
+  await say(page, 'Why?');
+  expect(requests[1].history).toHaveLength(2);
+  expect(Object.keys(requests[1].history[1]).sort()).toEqual(['content', 'role']);
+  await expect(page.locator('.mg-sources a')).toHaveCount(2);
+});
+
+test('recorded follow-up preserves previous turns and displays each transcript once', async ({ page }, testInfo) => {
+  const requests = await mockChat(page);
+  let uploads = 0;
+  await page.route('**/api/transcribe', route => route.fulfill({ json: { text: uploads++ === 0 ? 'What is GMC?' : 'Tell me more.' } }));
+  await openGuide(page, { mp4: testInfo.project.name === 'iphone-webkit' });
+  for (let count = 0; count < 2; count++) {
+    await page.getByRole('button', { name: 'Speak to GMC', exact: true }).click();
+    await page.getByRole('button', { name: 'Finish speaking' }).click();
+    await idle(page);
+  }
+  expect(uploads).toBe(2);
+  expect(requests).toHaveLength(2);
+  expect(requests[1].history).toHaveLength(2);
+  await expect(page.locator('.mg-user')).toHaveText(['What is GMC?', 'Tell me more.']);
+  await expect(page.locator('.mg-sources a')).toHaveCount(2);
+});
+
+test('native MediaRecorder encodes a generated audio stream and sends it once through transcription and chat', async ({ page }) => {
+  const requests = await mockChat(page);
+  let uploads = 0;
+  await page.route('**/api/transcribe', route => {
+    uploads++;
+    expect(route.request().headers()['content-type']).toMatch(/^audio\//);
+    return route.fulfill({ json: { text: 'What is GMC?' } });
+  });
+  await openGuide(page, { nativeRecording: true });
+  test.skip(!await page.evaluate(() => window.capture.nativeRecordingAvailable), 'This browser runtime lacks native MediaRecorder or generated audio streams; verify recording on a physical device.');
+  await page.getByRole('button', { name: 'Speak to GMC', exact: true }).click();
+  await page.waitForTimeout(1300);
+  await page.getByRole('button', { name: 'Finish speaking' }).click();
+  await expect(page.locator('.mg-user')).toHaveText('What is GMC?');
+  await idle(page);
+  expect(uploads).toBe(1);
+  expect(requests).toHaveLength(1);
+  expect(await page.evaluate(() => window.capture.uploads[0].size)).toBeGreaterThan(1000);
+  await page.evaluate(() => window.capture.stopTone());
 });

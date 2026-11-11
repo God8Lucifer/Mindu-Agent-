@@ -251,3 +251,5 @@
 .mg-voice-actions button { min-height: 44px; padding: 8px 12px; border: 1px solid currentColor; border-radius: 12px; background: transparent; color: inherit; cursor: pointer; }
 .mg-input button:disabled { opacity: 0.5; cursor: wait; }
 [data-state='transcribing'] .mg-logo { animation: mg-tilt 2.8s ease-in-out infinite; }
+
+.mg-voice-hint { margin: 0; font-size: 13px; line-height: 1.5; color: inherit; }

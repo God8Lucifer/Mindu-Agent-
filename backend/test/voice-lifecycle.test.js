@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import voice from '../../frontend/public/agent/guide/gmc-voice.js';
 
-function setup(overrides = {}) {
+function setup(overrides = {}, hooks = {}) {
   const recorders = [], states = [], transcripts = [], errors = [];
   let releases = 0, uploads = 0;
   class Recorder {
@@ -18,7 +18,7 @@ function setup(overrides = {}) {
   const stream = { getTracks: () => [{ stop: () => releases++ }] };
   const input = voice.createVoiceInput({
     env: { navigator: { mediaDevices: { getUserMedia: async () => stream } }, MediaRecorder: Recorder, Blob, ...overrides },
-    transcribe: async blob => { uploads++; assert.equal(blob.type, 'audio/mp4'); return 'What is GMC?'; },
+    transcribe: async blob => { uploads++; hooks.onUpload?.(blob); assert.equal(blob.type, 'audio/mp4'); return 'What is GMC?'; },
     onState: state => states.push(state), onTranscript: text => transcripts.push(text), onError: message => errors.push(message),
   });
   return { input, recorders, states, transcripts, errors, stream, releases: () => releases, uploads: () => uploads };
@@ -139,5 +139,43 @@ test('recording finishes automatically after detected speech followed by silence
     assert.equal(flow.uploads(), 1);
     assert.deepEqual(flow.transcripts, ['What is GMC?']);
     assert.equal(flow.input.active, false);
+  } finally { flow.input.destroy(); }
+});
+
+
+test('mobile audio is unlocked before the permission wait and released before upload', async () => {
+  const events = [];
+  let grant;
+  const permission = new Promise(resolve => { grant = resolve; });
+  class AudioContext {
+    state = 'running';
+    constructor() { events.push('created'); }
+    resume() { events.push('resumed'); return Promise.resolve(); }
+    createAnalyser() { return { fftSize: 512, getByteTimeDomainData: data => data.fill(150) }; }
+    createMediaStreamSource() { return { connect() {} }; }
+    close() { events.push('closed'); return Promise.resolve(); }
+  }
+  const flow = setup({ AudioContext, navigator: { mediaDevices: { getUserMedia: () => { events.push('permission'); return permission; } } } }, {
+    onUpload() { events.push('upload'); assert.equal(events.at(-2), 'closed'); },
+  });
+  try {
+    const starting = flow.input.start();
+    assert.deepEqual(events, ['created', 'resumed', 'permission']);
+    grant(flow.stream); await starting;
+    flow.input.stop(); await flush();
+    assert.deepEqual(events, ['created', 'resumed', 'permission', 'closed', 'upload']);
+    assert.equal(flow.uploads(), 1);
+    assert.equal(flow.releases(), 1);
+  } finally { flow.input.destroy(); }
+});
+test('insecure mobile HTTP origin explains why voice is unavailable without asking for permission', async () => {
+  let requested = false;
+  const flow = setup({ isSecureContext: false, navigator: { mediaDevices: { getUserMedia: async () => { requested = true; } } } });
+  try {
+    assert.equal(flow.input.supported, false);
+    assert.match(flow.input.availabilityMessage, /HTTPS/);
+    await flow.input.start();
+    assert.equal(requested, false);
+    assert.match(flow.errors[0], /HTTPS/);
   } finally { flow.input.destroy(); }
 });

@@ -84,6 +84,7 @@
       </div>
       <p class="mg-name">GMC</p>
       <p class="mg-status" aria-live="polite"></p>
+      <p class="mg-voice-hint" hidden></p>
       <div class="mg-voice-actions" hidden>
         <button type="button" class="mg-retry">Try microphone again</button>
         <button type="button" class="mg-type">Type instead</button>
@@ -175,7 +176,7 @@
     }
 
     function addSources(el, sources) {
-      const links = (sources || []).filter((s) => s && /^https:\/\//.test(s.url));
+      const links = (Array.isArray(sources) ? sources : []).filter((s) => s && /^https:\/\//.test(s.url));
       if (!links.length) return;
       const box = document.createElement('div');
       box.className = 'mg-sources';
@@ -205,7 +206,7 @@
       let reply;
       let ok = true;
       try {
-        [reply] = await Promise.all([answer(question, history.slice(-8)), wait(900)]);
+        [reply] = await Promise.all([answer(question, history.slice(-8).map(({ role, content }) => ({ role, content }))), wait(900)]);
       } catch (err) {
         console.error('Mindu answer failed', err);
         ok = false;
@@ -214,7 +215,7 @@
       const text = typeof reply === 'string' ? reply : (reply && reply.text) || '';
       replyCount += 1;
       fitConversation();
-      if (ok) history.push({ role: 'user', content: question }, { role: 'assistant', content: text });
+      if (ok) history.push({ role: 'user', content: question }, { role: 'assistant', content: text, sources: typeof reply === 'object' ? reply?.sources || [] : [] });
       setState('speaking');
       const el = addMessage('bot', '');
       await Promise.all([typeOut(el, text), speak(text)]);
@@ -257,8 +258,13 @@
         voiceActions.hidden = false;
       },
     });
-    // Keep recovery reachable even when this browser cannot capture audio.
-    mic.hidden = opts.mic === false;
+    // Insecure pages explain HTTPS up front; secure browsers retain recovery.
+    mic.hidden = opts.mic === false || window.isSecureContext === false;
+    const voiceHint = root.querySelector('.mg-voice-hint');
+    if (opts.mic !== false && voiceInput?.availabilityMessage) {
+      voiceHint.textContent = voiceInput.availabilityMessage;
+      voiceHint.hidden = false;
+    }
     mic.addEventListener('click', () => {
       if (busy) return;
       if (!voiceInput) {
@@ -309,8 +315,9 @@
     const restore = Array.isArray(opts.restore) ? opts.restore : [];
     restore.forEach((m) => {
       if (!m || typeof m.content !== 'string' || (m.role !== 'user' && m.role !== 'assistant')) return;
-      addMessage(m.role === 'user' ? 'user' : 'bot', m.content);
-      history.push({ role: m.role, content: m.content });
+      const el = addMessage(m.role === 'user' ? 'user' : 'bot', m.content);
+      if (m.role === 'assistant') addSources(el, m.sources);
+      history.push({ role: m.role, content: m.content, ...(m.role === 'assistant' ? { sources: m.sources || [] } : {}) });
       if (m.role === 'assistant') replyCount += 1;
     });
     fitConversation();
