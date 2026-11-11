@@ -1,11 +1,9 @@
 /*
  * Kiosk intro for the Mindu guide.
  *
- *   splash  → the GMC logo draws itself, big and centred
- *   welcome → logo moves up, a (mock) QR code and "Continue as guest" appear
- *   guest   → the logo glides into its place in the chat and the chat rises in
- *   scan    → (mock: tap the QR) the logo shrinks into the QR, "Mindu is on your phone",
- *             then the kiosk goes back to the splash for the next visitor
+ *   welcome → a phone chat QR code and "Continue as guest" appear
+ *   guest   → the GMC logo draws with a welcome message, then moves into the chat
+ *   scan    → the logo shrinks into the QR, confirms the handoff, then returns to welcome
  *   links   → side buttons in the chat (map, camera) open those pages with a circular
  *             reveal from the button, and bring you back with the chat restored
  *
@@ -15,28 +13,6 @@
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const wait = (ms) => new Promise((r) => setTimeout(r, reduce ? 0 : ms));
   const EASE = 'cubic-bezier(0.65, 0, 0.25, 1)';
-
-  // A QR-looking pattern for the demo. It does not encode anything.
-  function mockQr() {
-    const n = 29;
-    let seed = 20261110;
-    const rand = () => ((seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648);
-    const finder = (x, y) => x < 7 && y < 7;
-    const inFinder = (x, y) => finder(x, y) || finder(x - (n - 7), y) || finder(x, y - (n - 7));
-    let cells = '';
-    for (let y = 0; y < n; y++) {
-      for (let x = 0; x < n; x++) {
-        if (inFinder(x, y) || (x < 8 && y < 8) || (x > n - 9 && y < 8) || (x < 8 && y > n - 9)) continue;
-        if (rand() < 0.48) cells += `<rect x="${x}" y="${y}" width="1" height="1"/>`;
-      }
-    }
-    const eye = (x, y) =>
-      `<rect x="${x}" y="${y}" width="7" height="7"/><rect x="${x + 1}" y="${y + 1}" width="5" height="5" fill="#fff"/><rect x="${x + 2}" y="${y + 2}" width="3" height="3"/>`;
-    return `<svg viewBox="-2 -2 ${n + 4} ${n + 4}" shape-rendering="crispEdges" aria-hidden="true">
-      <rect x="-2" y="-2" width="${n + 4}" height="${n + 4}" fill="#fff"/>
-      <g fill="#1e2440">${eye(0, 0)}${eye(n - 7, 0)}${eye(0, n - 7)}${cells}</g>
-    </svg>`;
-  }
 
   // Every page shares the light/dark choice (data-theme on <html>).
   const isDark = () => document.documentElement.dataset.theme === 'dark';
@@ -58,10 +34,58 @@
     let busy = false;
     let stage;
     let currentGuide = null;
+    let qrTimer;
+    const params = new URLSearchParams(location.search);
+    const onPhone = params.get('mobile') === '1';
     const CHAT_KEY = 'mindu-chat';
     const saveChat = (msgs) => { try { sessionStorage.setItem(CHAT_KEY, JSON.stringify(msgs)); } catch {} };
     const loadChat = () => { try { return JSON.parse(sessionStorage.getItem(CHAT_KEY) || '[]'); } catch { return []; } };
     const clearChat = () => { try { sessionStorage.removeItem(CHAT_KEY); } catch {} };
+
+    async function handoffRequest(body) {
+      const response = await fetch('/api/handoff', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Could not connect.');
+      return data;
+    }
+
+    async function prepareQr() {
+      clearTimeout(qrTimer);
+      const code = intro.querySelector('.ks-qr');
+      const hint = intro.querySelector('.ks-qr-hint');
+      const active = () => code.isConnected && intro.dataset.step === 'welcome';
+      try {
+        const session = await handoffRequest({ action: 'create' });
+        if (!active()) return;
+        code.innerHTML = session.svg;
+        code.href = session.url;
+        code.setAttribute('aria-label', 'Open the GMC phone guide');
+        hint.textContent = 'Connect your phone to the same Wi-Fi, then scan and open the link.';
+        async function poll() {
+          if (!active()) return;
+          try {
+            const response = await fetch(`/api/handoff?id=${session.id}`, { cache: 'no-store' });
+            if (response.status === 410) { if (active()) prepareQr(); return; }
+            if (!response.ok) throw new Error('Connection lost');
+            const status = await response.json();
+            if (!active()) return;
+            if (status.claimed) { confirmHandoff(); return; }
+            hint.textContent = 'Connect your phone to the same Wi-Fi, then scan and open the link.';
+          } catch {
+            if (active()) hint.textContent = 'Reconnecting to the kiosk…';
+          }
+          if (active()) qrTimer = setTimeout(poll, 1500);
+        }
+        qrTimer = setTimeout(poll, 1500);
+      } catch {
+        if (active()) {
+          hint.textContent = 'Preparing your QR code… Check the network connection.';
+          qrTimer = setTimeout(prepareQr, 5000);
+        }
+      }
+    }
 
     function flyTo(target, scale, extra = '') {
       const a = stage.getBoundingClientRect();
@@ -73,7 +97,8 @@
       if (extra) stage.style.opacity = extra;
     }
 
-    async function showIntro() {
+    function showIntro() {
+      clearTimeout(qrTimer);
       busy = true;
       currentGuide = null;
       clearChat();
@@ -86,37 +111,72 @@
 
       intro.hidden = false;
       intro.className = 'mg ks';
-      intro.dataset.step = 'splash';
+      intro.dataset.step = 'welcome';
       intro.innerHTML = `
         <div class="ks-hero">
-          <div class="mg-stage ks-stage" data-state="wake">
+          <div class="mg-stage ks-welcome-logo" data-state="wake" role="img" aria-label="GMC logo">
             <span class="mg-ring"></span><span class="mg-ring"></span><span class="mg-ring"></span>
             ${MinduGuide.logoSvg()}
           </div>
           <p class="ks-title">GMC<span>Your guide to Gelephu Mindfulness City</span></p>
         </div>
         <div class="ks-welcome"><div class="ks-welcome-inner">
-          <button type="button" class="ks-qr" aria-label="Demo QR code. Tap to simulate a scan.">${mockQr()}</button>
+          <a class="ks-qr" target="_blank" rel="noopener" aria-label="Preparing QR code"></a>
           <p class="ks-qr-label">Scan with your phone to take the GMC guide with you</p>
-          <p class="ks-qr-hint">Demo: tap the code to simulate a scan</p>
+          <p class="ks-qr-hint">Preparing your QR code…</p>
           <div class="ks-or"><span>or</span></div>
           <button type="button" class="ks-guest">Continue as guest</button>
         </div></div>
-        <div class="ks-done" aria-live="polite"></div>`;
-      stage = intro.querySelector('.ks-stage');
-      intro.querySelector('.ks-guest').addEventListener('click', continueAsGuest);
-      intro.querySelector('.ks-qr').addEventListener('click', simulateScan);
-
-      await wait(2400); // lines draw in
-      stage.dataset.state = 'idle';
-      await wait(900);
-      intro.dataset.step = 'welcome';
+        <div class="ks-done" role="status"></div>`;
+      intro.querySelector('.ks-guest').addEventListener('click', enterGuide);
       busy = false;
+      prepareQr();
+      const welcomeLogo = intro.querySelector('.ks-welcome-logo');
+      wait(2400).then(() => {
+        if (welcomeLogo.isConnected && intro.dataset.step === 'welcome') welcomeLogo.dataset.state = 'idle';
+      });
     }
 
-    async function continueAsGuest() {
+    async function confirmHandoff() {
       if (busy) return;
       busy = true;
+      clearTimeout(qrTimer);
+      stage = intro.querySelector('.ks-welcome-logo');
+      const qr = intro.querySelector('.ks-qr');
+      intro.dataset.step = 'handoff';
+      stage.dataset.state = 'speaking';
+      await wait(500);
+      flyTo(qr, 0.18, '0');
+      qr.classList.add('ks-qr-pulse');
+      await wait(1000);
+
+      intro.dataset.step = 'sent';
+      intro.querySelector('.ks-done').innerHTML = `
+        <div class="ks-check" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+        <p class="ks-done-title">GMC is now on your phone</p>
+        <p class="ks-done-sub">Enjoy the GMC Experience Centre. Your guide goes with you.</p>`;
+      await wait(4200);
+      showIntro();
+    }
+
+    async function enterGuide() {
+      if (busy) return;
+      busy = true;
+      clearTimeout(qrTimer);
+      intro.dataset.step = 'entering';
+      intro.innerHTML = `
+        <div class="ks-hero">
+          <div class="mg-stage ks-stage" data-state="wake">
+            <span class="mg-ring"></span><span class="mg-ring"></span><span class="mg-ring"></span>
+            ${MinduGuide.logoSvg()}
+          </div>
+          <p class="ks-title ks-enter-title">Welcome to GMC</p>
+        </div>`;
+      stage = intro.querySelector('.ks-stage');
+
+      await wait(2400); // Let the logo finish drawing before it moves into the chat.
+      stage.dataset.state = 'idle';
+      await wait(500);
       intro.dataset.step = 'leaving';
       stage.dataset.state = 'speaking';
 
@@ -134,30 +194,10 @@
       intro.hidden = true;
       intro.innerHTML = '';
       guideEl.classList.add('ks-in');
-      if (restart) restart.hidden = false;
+      if (restart) restart.hidden = onPhone;
       showLinks(true);
       guide.greet();
       busy = false;
-    }
-
-    async function simulateScan() {
-      if (busy) return;
-      busy = true;
-      const qr = intro.querySelector('.ks-qr');
-      intro.dataset.step = 'handoff';
-      stage.dataset.state = 'speaking';
-      await wait(500);
-      flyTo(qr, 0.18, '0');
-      qr.classList.add('ks-qr-pulse');
-      await wait(1000);
-
-      intro.dataset.step = 'sent';
-      intro.querySelector('.ks-done').innerHTML = `
-        <div class="ks-check" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
-        <p class="ks-done-title">Your GMC guide is now on your phone</p>
-        <p class="ks-done-sub">Enjoy the GMC Experience Centre. Your guide goes with you.</p>`;
-      await wait(4200);
-      showIntro();
     }
 
     function veilAt(button, className) {
@@ -183,7 +223,7 @@
       requestAnimationFrame(() => veil.classList.add('ks-veil-open'));
       if (currentGuide) saveChat(currentGuide.transcript());
       await wait(1100);
-      const back = `${location.origin}${location.pathname}?from=${encodeURIComponent(link.id)}`;
+      const back = `${location.origin}${location.pathname}?from=${encodeURIComponent(link.id)}${onPhone ? '&mobile=1' : ''}`;
       window.location.href = `${link.url}${link.url.includes('?') ? '&' : '?'}back=${encodeURIComponent(back)}`;
     }
 
@@ -191,13 +231,13 @@
     // page colour back into the button it was opened from.
     async function returnFrom(link) {
       busy = true;
-      history.replaceState(null, '', location.pathname); // a reload starts fresh
+      history.replaceState(null, '', `${location.pathname}${onPhone ? '?mobile=1' : ''}`);
       intro.hidden = true;
       const restore = loadChat();
       currentGuide = mountGuide(guideEl, { wake: false, autoGreet: false, restore });
       guideEl.hidden = false;
       guideEl.classList.add('ks-enter');
-      if (restart) restart.hidden = false;
+      if (restart) restart.hidden = onPhone;
       showLinks(true);
 
       const veil = veilAt(link.button, `ks-veil ks-veil-open ks-veil-back${isDark() ? ' ks-veil-dark' : ''}`);
@@ -221,9 +261,23 @@
       link.button.innerHTML = ICONS[link.id] || '';
       link.button.addEventListener('click', () => openLink(link));
     });
-    const from = new URLSearchParams(location.search).get('from');
+    async function openPhoneGuide() {
+      intro.hidden = false;
+      intro.className = 'mg ks';
+      if (restart) restart.hidden = true;
+      await enterGuide();
+      // Confirm only once the chat UI is ready on the visitor's device.
+      const id = params.get('handoff');
+      if (id) {
+        try { await handoffRequest({ action: 'claim', id }); }
+        catch { /* An expired kiosk code never blocks an already-open phone chat. */ }
+      }
+    }
+
+    const from = params.get('from');
     const backFrom = links.find((l) => l.id === from);
     if (backFrom) returnFrom(backFrom);
+    else if (onPhone) openPhoneGuide();
     else showIntro();
   }
 

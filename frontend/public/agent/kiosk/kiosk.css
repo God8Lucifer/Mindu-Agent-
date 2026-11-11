@@ -1,10 +1,12 @@
-/* Kiosk intro: splash → welcome (QR / guest) → chat. Uses the guide's colour tokens (.mg). */
+/* Kiosk intro: QR / guest → animated welcome → chat. Uses the guide's colour tokens (.mg). */
 .ks {
   position: fixed;
   inset: 0;
   z-index: 10;
   max-width: none;
   justify-content: center;
+  justify-content: safe center;
+  overflow-y: auto;
   gap: 0;
   padding: 24px 16px;
   box-sizing: border-box;
@@ -12,16 +14,16 @@
 }
 .ks[hidden] { display: none; }
 
-/* ---- hero: the logo ---- */
-.ks-hero { display: flex; flex-direction: column; align-items: center; }
+/* ---- animated logos on the QR screen and chat entrance ---- */
+.ks-hero { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; }
+.ks .ks-welcome-logo { width: min(28vmin, 200px); height: min(28vmin, 200px); }
+.ks .ks-welcome-logo .mg-logo { width: 80%; height: 80%; }
 .ks .ks-stage {
   width: min(58vmin, 440px);
   height: min(58vmin, 440px);
-  transition: width 0.9s var(--ks-ease), height 0.9s var(--ks-ease);
 }
 .ks .ks-stage .mg-logo { width: 80%; height: 80%; }
 .ks .ks-stage .mg-ring { inset: 4%; }
-.ks:not([data-step='splash']) .ks-stage { width: min(30vmin, 200px); height: min(30vmin, 200px); }
 
 .ks-title {
   margin: 18px 0 0;
@@ -32,15 +34,14 @@
   font-size: 30px;
   font-weight: 600;
   letter-spacing: 0.02em;
-  opacity: 0;
-  animation: ks-fade 0.8s ease-out 1.8s both;
   transition: opacity 0.4s, font-size 0.9s var(--ks-ease), margin 0.9s var(--ks-ease);
 }
 .ks-title span { font-size: 15px; font-weight: 400; color: var(--mg-muted); letter-spacing: 0; }
-.ks:not([data-step='splash']) .ks-title { font-size: 22px; margin-top: 8px; }
+.ks-enter-title { animation: ks-fade 0.8s ease-out 0.35s both; }
 
 /* ---- welcome: QR + guest ---- */
 .ks-welcome {
+  flex-shrink: 0;
   display: grid;
   grid-template-rows: 0fr;
   opacity: 0;
@@ -55,12 +56,13 @@
   min-height: 0;
 }
 .ks[data-step='welcome'] .ks-welcome,
-.ks[data-step='leaving'] .ks-welcome,
 .ks[data-step='handoff'] .ks-welcome { grid-template-rows: 1fr; }
 .ks[data-step='welcome'] .ks-welcome { opacity: 1; transition-delay: 0s, 0.35s; }
 .ks[data-step='handoff'] .ks-welcome { opacity: 1; }
 
 .ks-qr {
+  display: block;
+  box-sizing: border-box;
   margin-top: 28px;
   width: 168px;
   height: 168px;
@@ -74,9 +76,8 @@
 }
 .ks-qr:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(20, 24, 50, 0.18); }
 .ks-qr svg { display: block; width: 100%; height: 100%; }
-.ks-qr-pulse { animation: ks-pulse 1s ease-out; box-shadow: 0 0 0 4px var(--mg-hot); }
-.ks-qr-label { margin: 6px 0 0; font-size: 16px; font-weight: 600; }
-.ks-qr-hint { margin: 0; font-size: 12px; color: var(--mg-muted); }
+.ks-qr-label { margin: 6px 0 0; font-size: 16px; font-weight: 600; text-align: center; }
+.ks-qr-hint { margin: 0; font-size: 12px; color: var(--mg-muted); max-width: 320px; text-align: center; }
 .ks-or {
   display: flex;
   align-items: center;
@@ -102,18 +103,20 @@
 }
 .ks-guest:hover { transform: translateY(-1px); filter: brightness(1.05); }
 
-/* leaving for the chat: everything but the logo fades */
-.ks[data-step='leaving'] .ks-title,
-.ks[data-step='leaving'] .ks-welcome,
+/* Keep the animated logo visible while it moves into the chat. */
+.ks[data-step='leaving'] .ks-title { opacity: 0; pointer-events: none; animation: none; }
+
+/* QR handoff: the logo moves into the code, then the kiosk resets. */
 .ks[data-step='handoff'] .ks-title,
 .ks[data-step='handoff'] .ks-qr-hint,
 .ks[data-step='handoff'] .ks-or,
 .ks[data-step='handoff'] .ks-guest { opacity: 0; transition: opacity 0.35s; pointer-events: none; }
-/* drop the title's fade-in (fill-mode keeps it at opacity 1) so it can fade out */
-.ks[data-step='leaving'] .ks-title,
-.ks[data-step='handoff'] .ks-title { animation: none; }
-
-/* ---- sent to phone ---- */
+.ks-qr-pulse { animation: ks-pulse 1s ease-out; box-shadow: 0 0 0 4px var(--mg-hot); }
+.ks[data-step='handoff'] .ks-qr {
+  outline: 4px solid var(--mg-hot);
+  outline-offset: 4px;
+  box-shadow: 0 0 24px color-mix(in srgb, var(--mg-hot) 35%, transparent);
+}
 .ks-done { display: none; flex-direction: column; align-items: center; text-align: center; gap: 6px; }
 .ks[data-step='sent'] .ks-hero,
 .ks[data-step='sent'] .ks-welcome { display: none; }
@@ -184,7 +187,7 @@
 
 @keyframes ks-fade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 @keyframes ks-rise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
-@keyframes ks-pulse { 0% { transform: scale(1); } 40% { transform: scale(1.06); } 100% { transform: scale(1); } }
+@keyframes ks-pulse { 0%, 100% { transform: scale(1); } 40% { transform: scale(1.06); } }
 @keyframes ks-pop { from { transform: scale(0.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 @keyframes ks-tick { to { stroke-dashoffset: 0; } }
 
@@ -274,3 +277,9 @@
 }
 .ks-side a:hover { color: #e8874a; border-color: #e8874a; }
 :root[data-theme="dark"] .ks-side a { background: #1c2238; border-color: #343c5c; color: #a4aac0; }
+
+@media (max-width: 600px) {
+  .ks-side { flex-direction: row; align-items: center; top: 14px; right: 12px; gap: 6px; }
+  .ks-map { width: 36px; height: 36px; }
+  .ks-side a { font-size: 11px; padding: 6px 8px; }
+}
