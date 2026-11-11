@@ -87,7 +87,15 @@
           });
           return { text: data.answer, sources: data.sources };
         },
-        mic: false, // typed questions only (no microphone button)
+        // Used for the mic only when the browser has no built-in speech recognition.
+        transcribe: async (blob) => {
+          const data = await api('/api/transcribe', {
+            method: 'POST',
+            headers: { 'Content-Type': blob.type.split(';')[0] || 'audio/webm' },
+            body: blob,
+          });
+          return data.text;
+        },
         suggestions: ['What is GMC?', 'Who leads GMC?', 'What are the economic sectors?'],
       });
 
