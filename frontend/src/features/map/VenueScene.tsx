@@ -8,6 +8,7 @@ import { floorZones, pillars, places, rails, route, screens, walls, type Place, 
 import { extrudeFootprint, ringGeometry, stripGeometry, toWorld, wallGeometry, worldXYZ } from './geometry';
 import { screenTexture, wallTexture } from './textures';
 import { sceneTheme as T, zoneColors } from './theme';
+import { Surroundings } from './Surroundings';
 import { MasterplanHolo, type PlanFocus } from './MasterplanHolo';
 
 const WALL_HEIGHT = 1.6;
@@ -38,8 +39,9 @@ export function VenueScene({ controlsRef, theme, selectedId, holoId, labelRefs, 
   const { ACTION } = CameraControlsImpl;
   return (
     <>
-      <color key={`bg-${theme}`} attach="background" args={[T.background]} />
-      <fog key={`fog-${theme}`} attach="fog" args={[T.background, 120, 220]} />
+      <color key={`bg-${theme}`} attach="background" args={[T.horizon]} />
+      {/* Fades the far landscape and the foothills into the horizon colour. */}
+      <fog key={`fog-${theme}`} attach="fog" args={[T.horizon, 110, 320]} />
       {/* Diffuse light is divided by π, so ~3 total keeps top faces at their token colour. */}
       <ambientLight intensity={1.35} />
       <hemisphereLight key={`sky-${theme}`} args={['#ffffff', T.ground, 0.85]} />
@@ -67,6 +69,7 @@ export function VenueScene({ controlsRef, theme, selectedId, holoId, labelRefs, 
       />
 
       <group key={theme}>
+      <Surroundings />
       <Ground onMiss={() => onSelect(null)} />
       <NeutralFloors />
       {places.filter(p => p.zone).map(p => (
@@ -104,10 +107,11 @@ export function VenueScene({ controlsRef, theme, selectedId, holoId, labelRefs, 
 function Ground({ onMiss }: { onMiss: () => void }) {
   return (
     <group>
-      {/* Unlit, so the ground matches the page background exactly. */}
-      <mesh rotation-x={-Math.PI / 2} position-y={-0.33} onClick={e => isClick(e) && onMiss()}>
-        <planeGeometry args={[400, 400]} />
-        <meshBasicMaterial color={T.background} />
+      {/* Below the landscape island (Surroundings.tsx): the misty "table" it stands on,
+          and the click target for deselecting (clicks pass through the landscape). */}
+      <mesh rotation-x={-Math.PI / 2} position-y={-3.2} onClick={e => isClick(e) && onMiss()}>
+        <planeGeometry args={[700, 700]} />
+        <meshBasicMaterial color={T.horizon} />
       </mesh>
       {/* Catches only the building's shadow. */}
       <mesh rotation-x={-Math.PI / 2} position-y={-0.32} receiveShadow>
