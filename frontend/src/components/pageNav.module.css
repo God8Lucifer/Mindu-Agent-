@@ -1,0 +1,53 @@
+/* Matches the guide's own buttons (public/agent/kiosk/kiosk.css): white / navy pills, orange hover. */
+.nav {
+  --pn-bg: #ffffff;
+  --pn-line: #e2ddd0;
+  --pn-ink: #2f3c6b;
+  position: fixed;
+  top: 14px;
+  right: 16px;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+:global(:root[data-theme="dark"]) .nav {
+  --pn-bg: #1c2238;
+  --pn-line: #343c5c;
+  --pn-ink: #e9e4d8;
+}
+.theme, .back {
+  height: 42px;
+  border: 1px solid var(--pn-line);
+  background: var(--pn-bg);
+  color: var(--pn-ink);
+  box-shadow: 0 4px 16px rgba(20, 24, 50, 0.12);
+  transition: transform 0.2s, border-color 0.2s, color 0.2s;
+}
+.theme {
+  width: 42px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  padding: 0;
+}
+.theme svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.back {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 18px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.theme:hover, .back:hover { transform: translateY(-1px); border-color: #e8874a; color: #e8874a; }
+.theme:focus-visible, .back:focus-visible { outline: 2px solid #e8874a; outline-offset: 2px; }
+@media (max-width: 520px) {
+  .nav { top: 10px; right: 10px; gap: 8px; }
+  .theme, .back { height: 38px; }
+  .theme { width: 38px; }
+  .back { padding: 0 14px; font-size: 13px; }
+}

@@ -7,6 +7,7 @@
  * The logo has five states: 'wake' | 'idle' | 'listening' | 'thinking' | 'speaking'.
  * `answer(question, history)` returns the reply: a string, or { text, sources: [{ title, url }] }.
  * `transcribe(blob)` (optional) turns recorded audio into text when the browser has no speech recognition.
+ * `mic: false` hides the microphone button (typed questions only).
  * Without `answer`, scripted replies are used.
  */
 (function () {
@@ -41,10 +42,10 @@
 
   // Placeholder replies until the real AI is connected (teammate's part).
   const SCRIPTED = [
-    { match: /^(hi|hello|hey|kuzu)/i, reply: "Kuzuzangpo la! I'm Mindu, your guide to Gelephu Mindfulness City. What would you like to explore?" },
+    { match: /^(hi|hello|hey|kuzu)/i, reply: "Kuzuzangpo la! I'm your GMC guide to Gelephu Mindfulness City. What would you like to explore?" },
     { match: /where|map|go|visit|place/i, reply: 'I can point you around the city. Ask me about a place, and I will show you the way.' },
     { match: /what is|about|gmc|gelephu/i, reply: 'Gelephu Mindfulness City is a new city in southern Bhutan, built around mindfulness, nature and sustainable growth.' },
-    { match: /who are you|your name/i, reply: "I'm Mindu, the GMC guide. The lines you see are the city's logo — I light up when I listen, think and speak." },
+    { match: /who are you|your name/i, reply: "I'm the GMC guide. The lines you see are the city's logo — I light up when I listen, think and speak." },
   ];
   const FALLBACK = "That's a good question. My full answers are coming soon — for now, try asking what GMC is or where to go.";
 
@@ -80,7 +81,7 @@
         <span class="mg-ring"></span><span class="mg-ring"></span><span class="mg-ring"></span>
         ${logoSvg()}
       </div>
-      <p class="mg-name">Mindu <span>· your GMC guide</span></p>
+      <p class="mg-name">GMC <span>· your guide</span></p>
       <p class="mg-status" aria-live="polite"></p>
       <div class="mg-voice-actions" hidden>
         <button type="button" class="mg-retry">Try microphone again</button>
@@ -89,10 +90,10 @@
       <div class="mg-log" role="log" aria-live="polite"></div>
       <div class="mg-chips"></div>
       <form class="mg-input">
-        <button type="button" class="mg-mic" aria-label="Speak to Mindu" hidden>
+        <button type="button" class="mg-mic" aria-label="Speak to GMC" hidden>
           <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
         </button>
-        <input type="text" placeholder="Ask Mindu anything…" aria-label="Your question" autocomplete="off" />
+        <input type="text" placeholder="Ask GMC anything…" aria-label="Your question" autocomplete="off" />
         <button type="submit" class="mg-send" aria-label="Send">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6"/></svg>
         </button>
@@ -122,7 +123,7 @@
     function updateControls() {
       send.disabled = busy || !!voiceInput?.active;
       mic.disabled = busy || ['transcribing', 'requesting'].includes(voicePhase);
-      mic.setAttribute('aria-label', voicePhase === 'listening' ? 'Finish speaking' : 'Speak to Mindu');
+      mic.setAttribute('aria-label', voicePhase === 'listening' ? 'Finish speaking' : 'Speak to GMC');
       mic.setAttribute('aria-pressed', String(voicePhase === 'listening'));
       mic.classList.toggle('mg-on', voicePhase === 'listening');
     }
@@ -223,7 +224,7 @@
       typingTimer = setTimeout(() => !busy && !voiceInput?.active && setState('idle'), 2500);
     });
 
-    voiceInput = window.MinduVoice?.createVoiceInput({
+    voiceInput = opts.mic === false ? null : window.MinduVoice?.createVoiceInput({
       transcribe: opts.transcribe,
       onState(next) {
         voicePhase = next;
@@ -240,7 +241,7 @@
     });
     mic.hidden = !voiceInput?.supported;
     mic.addEventListener('click', () => {
-      if (busy) return;
+      if (busy || !voiceInput) return;
       if (voiceInput.active) voiceInput.stop();
       else {
         if (voice) speechSynthesis.cancel();
@@ -293,7 +294,7 @@
       if (greeted || busy || voiceInput?.active) return;
       greeted = true;
       setState('speaking');
-      const greeting = opts.greeting || "Kuzuzangpo la! I'm Mindu, your guide to Gelephu Mindfulness City.";
+      const greeting = opts.greeting || "Kuzuzangpo la! I'm your GMC guide to Gelephu Mindfulness City.";
       await typeOut(addMessage('bot', ''), greeting);
       if (!busy && !voiceInput?.active) setState('idle');
     }

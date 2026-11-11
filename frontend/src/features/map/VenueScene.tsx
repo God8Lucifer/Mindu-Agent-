@@ -8,6 +8,7 @@ import { floorZones, pillars, places, rails, route, screens, walls, type Place, 
 import { extrudeFootprint, ringGeometry, stripGeometry, toWorld, wallGeometry, worldXYZ } from './geometry';
 import { screenTexture, wallTexture } from './textures';
 import { sceneTheme as T, zoneColors } from './theme';
+import { Surroundings } from './Surroundings';
 import { MasterplanHolo, type PlanFocus } from './MasterplanHolo';
 
 const WALL_HEIGHT = 1.6;
@@ -17,6 +18,10 @@ const OUTLINE = T.outline;
 export interface SceneProps {
   controlsRef: RefObject<CameraControlsImpl | null>;
   selectedId: string | null;
+  /** Light / dark: colours come from ./theme, so a change rebuilds the scene content (not the camera). */
+  theme: string;
+  /** The room whose hologram is running (only after "I'm here"). */
+  holoId: string | null;
   labelRefs: RefObject<Map<string, HTMLElement>>;
   showRoute: boolean;
   /** Chambers whose butter lamp the visitor has lit. */
@@ -30,15 +35,16 @@ export interface SceneProps {
 /** Ignore clicks that were really the end of a drag. */
 const isClick = (e: ThreeEvent<MouseEvent>) => e.delta < 6;
 
-export function VenueScene({ controlsRef, selectedId, labelRefs, showRoute, litRooms, planFocus, onPickBridge, onSelect }: SceneProps) {
+export function VenueScene({ controlsRef, theme, selectedId, holoId, labelRefs, showRoute, litRooms, planFocus, onPickBridge, onSelect }: SceneProps) {
   const { ACTION } = CameraControlsImpl;
   return (
     <>
-      <color attach="background" args={[T.background]} />
-      <fog attach="fog" args={[T.background, 120, 220]} />
+      <color key={`bg-${theme}`} attach="background" args={[T.horizon]} />
+      {/* Fades the far landscape and the foothills into the horizon colour. */}
+      <fog key={`fog-${theme}`} attach="fog" args={[T.horizon, 110, 320]} />
       {/* Diffuse light is divided by π, so ~3 total keeps top faces at their token colour. */}
       <ambientLight intensity={1.35} />
-      <hemisphereLight args={['#ffffff', T.ground, 0.85]} />
+      <hemisphereLight key={`sky-${theme}`} args={['#ffffff', T.ground, 0.85]} />
       <directionalLight
         position={[-25, 45, 30]}
         intensity={1.25}
@@ -62,6 +68,8 @@ export function VenueScene({ controlsRef, selectedId, labelRefs, showRoute, litR
         touches={{ one: ACTION.TOUCH_TRUCK, two: ACTION.TOUCH_DOLLY_ROTATE, three: ACTION.TOUCH_TRUCK }}
       />
 
+      <group key={theme}>
+      <Surroundings />
       <Ground onMiss={() => onSelect(null)} />
       <NeutralFloors />
       {places.filter(p => p.zone).map(p => (
@@ -78,18 +86,19 @@ export function VenueScene({ controlsRef, selectedId, labelRefs, showRoute, litR
       <Furniture />
       {showRoute && <RouteLine />}
       {places.filter(p => p.feature).map(p => (
-        <HoloBeam key={p.id} at={p.holoAt ?? p.anchor} base={p.holoBase ?? 1.02} top={p.holoHeight ?? HOLO_HEIGHT} active={selectedId === p.id} />
+        <HoloBeam key={p.id} at={p.holoAt ?? p.anchor} base={p.holoBase ?? 1.02} top={p.holoHeight ?? HOLO_HEIGHT} active={holoId === p.id} />
       ))}
       {places.filter(p => p.feature === 'masterplan').map(p => (
         <MasterplanHolo
           key={p.id}
           position={worldXYZ(p.holoAt ?? p.anchor, (p.holoHeight ?? HOLO_HEIGHT) + 0.25)}
           scale={1.15}
-          active={selectedId === p.id}
+          active={holoId === p.id}
           focus={planFocus}
           onPickBridge={onPickBridge}
         />
       ))}
+      </group>
       <LabelProjector labelRefs={labelRefs} />
     </>
   );
@@ -98,10 +107,11 @@ export function VenueScene({ controlsRef, selectedId, labelRefs, showRoute, litR
 function Ground({ onMiss }: { onMiss: () => void }) {
   return (
     <group>
-      {/* Unlit, so the ground matches the page background exactly. */}
-      <mesh rotation-x={-Math.PI / 2} position-y={-0.33} onClick={e => isClick(e) && onMiss()}>
-        <planeGeometry args={[400, 400]} />
-        <meshBasicMaterial color={T.background} />
+      {/* Below the landscape island (Surroundings.tsx): the misty "table" it stands on,
+          and the click target for deselecting (clicks pass through the landscape). */}
+      <mesh rotation-x={-Math.PI / 2} position-y={-3.2} onClick={e => isClick(e) && onMiss()}>
+        <planeGeometry args={[700, 700]} />
+        <meshBasicMaterial color={T.horizon} />
       </mesh>
       {/* Catches only the building's shadow. */}
       <mesh rotation-x={-Math.PI / 2} position-y={-0.32} receiveShadow>

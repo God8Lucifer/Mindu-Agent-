@@ -5,9 +5,11 @@ import Image from 'next/image';
 import { Canvas } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { CameraControlsImpl } from '@react-three/drei';
-import { categoryLabels, chamberIds, places, routeOrder, type Place, type PlaceCategory } from './layout-data';
+import { categoryLabels, places, routeOrder, type Place, type PlaceCategory } from './layout-data';
 import { toWorld, venueBounds } from './geometry';
 import { HOLO_HEIGHT, VenueScene } from './VenueScene';
+import { PageNav } from '@/components/PageNav';
+import { useTheme } from '@/components/theme';
 import { HoloSectors } from './HoloSectors';
 import { HoloVision } from './HoloVision';
 import { HoloAvatar } from './HoloAvatar';
@@ -63,7 +65,7 @@ export default function VenueMap() {
   const [query, setQuery] = useState('');
   const [openGroup, setOpenGroup] = useState<PlaceCategory | null>('chamber');
   // The map is client-only (ssr: false), so storage can be read during the first render.
-  // Opened from the Mindu kiosk guide (?back=<url>): the dock's Mindu button returns there.
+  // Opened from the GMC guide (?back=<url>): "Back to GMC" returns there.
   const [backToMindu] = useState<string | null>(loadBackToMindu);
   const [visited, setVisited] = useState<Set<string>>(() => new Set(loadProgress().visited));
   const [currentId, setCurrentId] = useState<string | null>(() => loadProgress().current);
@@ -72,8 +74,11 @@ export default function VenueMap() {
   const [toast, setToast] = useState<string | null>(null);
 
   const selected = selectedId ? byId.get(selectedId) ?? null : null;
+  // A room's hologram only starts once the visitor taps "I'm here" in that room.
+  const holoOn = !!selected?.feature && currentId === selected.id;
+  // The 3D scene reads its colours on render, so re-render it when the theme flips.
+  const theme = useTheme();
   const nextStop = useMemo(() => routeOrder.find(id => byId.get(id)?.category === 'chamber' && !visited.has(id)) ?? null, [visited]);
-  const chambersDone = chamberIds.filter(id => visited.has(id)).length;
 
   // ---- camera moves -------------------------------------------------------
   const overview = useCallback((mode: View = view, smooth = true) => {
@@ -89,14 +94,14 @@ export default function VenueMap() {
     c.dollyTo(fit, smooth);
   }, [view]);
 
-  const flyTo = useCallback((place: Place) => {
+  const flyTo = useCallback((place: Place, holo = false) => {
     const c = controlsRef.current;
     if (!c) return;
     const aspect = (c.camera as THREE.PerspectiveCamera).aspect || 1;
     // Portrait phones see a much narrower slice, so pull the camera back.
     const k = aspect < 1 ? 1.6 : 1;
 
-    if (place.feature) {
+    if (place.feature && holo) {
       // Frame the hologram rising from the table: on wide screens leave room
       // for the card on the right; on phones lift it above the bottom sheet.
       const [hx, hz] = toWorld(place.holoAt ?? place.anchor);
@@ -126,9 +131,9 @@ export default function VenueMap() {
     setSelectedId(id);
     if (id && fly) {
       const place = byId.get(id);
-      if (place) flyTo(place);
+      if (place) flyTo(place, place.id === currentId);
     }
-  }, [flyTo, setSelectedId]);
+  }, [flyTo, setSelectedId, currentId]);
 
   // Registers a hologram's floating element so the scene can pin it over its chamber.
   const holoAnchor = useCallback((id: string) => (el: HTMLDivElement | null) => {
@@ -202,18 +207,17 @@ export default function VenueMap() {
     setVisited(v => new Set(v).add(id));
   };
 
+  // "I'm here" in a hologram room starts the hologram: frame it as it rises.
+  const framedHolo = useRef<string | null>(null);
+  useEffect(() => {
+    if (!holoOn || !selected) { framedHolo.current = null; return; }
+    if (framedHolo.current === selected.id) return;
+    framedHolo.current = selected.id;
+    flyTo(selected, true);
+  }, [holoOn, selected, flyTo]);
+
   const goNext = () => {
     if (nextStop) choose(nextStop);
-  };
-
-  const share = async (place: Place) => {
-    const url = `${location.origin}${location.pathname}?place=${place.id}`;
-    try {
-      await navigator.clipboard.writeText(url);
-      setToast('Link copied');
-    } catch {
-      setToast(url);
-    }
   };
 
   const results = useMemo(() => {
@@ -234,7 +238,9 @@ export default function VenueMap() {
       >
         <VenueScene
           controlsRef={controlsRef}
+          theme={theme}
           selectedId={selectedId}
+          holoId={holoOn ? selectedId : null}
           labelRefs={labelRefs}
           litRooms={litRooms}
           planFocus={planState}
@@ -245,9 +251,9 @@ export default function VenueMap() {
       </Canvas>
 
       {/* Map labels, positioned over the 3D scene by LabelProjector */}
-      <div className={`${styles.labels} ${selected?.feature ? styles.labelsDim : ''}`}>
+      <div className={`${styles.labels} ${holoOn ? styles.labelsDim : ''}`}>
         {/* A place showing its hologram hides its label, which would sit under the dial. */}
-        {places.filter(p => !(p.feature && p.id === selectedId)).map(p => (
+        {places.filter(p => !(holoOn && p.id === selectedId)).map(p => (
           <MapLabel
             key={p.id}
             place={p}
@@ -271,15 +277,9 @@ export default function VenueMap() {
             <strong>Experience Centre Map</strong>
           </div>
         </div>
-        <div className={styles.progress} aria-live="polite">
-          <span><b>{chambersDone}</b> of {chamberIds.length} chambers</span>
-          {nextStop
-            ? <button type="button" onClick={goNext}>Next: {byId.get(nextStop)?.name} →</button>
-            : <span className={styles.done}>All chambers visited ✓</span>}
-        </div>
       </header>
 
-{!selected?.feature && (
+{!holoOn && (
       <p className={styles.hints}>
         <span className={styles.hintMouse}>Drag rotates · Right-drag pans · Scroll zooms</span>
         <span className={styles.hintTouch}>Swipe pans · Two fingers rotate · Pinch zooms</span>
@@ -348,10 +348,9 @@ export default function VenueMap() {
       {/* Bottom-left buttons */}
       <div className={styles.dock}>
         <button type="button" className={panel === 'find' ? styles.dockOn : ''} onClick={() => setPanel(p => (p === 'find' ? null : 'find'))}>☰ Find</button>
-        <button type="button" className={panel === 'search' ? styles.dockOn : ''} onClick={() => setPanel(p => (p === 'search' ? null : 'search'))}>⌕ Search</button>
-        <a className={styles.dockPhoto} href={`/photo${currentId && chamberIds.includes(currentId) ? `?place=${currentId}` : ''}`} aria-label="Photo collection">◉ Photos</a>
-        <a className={styles.dockGuide} href={backToMindu ?? `/mindu?place=${currentId && chamberIds.includes(currentId) ? currentId : 'chamber1'}`}>{backToMindu ? '← Back to Mindu' : '✦ Meet Mindu'}</a>
       </div>
+
+      <PageNav back={backToMindu} />
 
       {/* Place card, or the richer Chamber 3 panel */}
       {selected && (() => {
@@ -365,10 +364,6 @@ export default function VenueMap() {
             {nextStop && nextStop !== selected.id && (
               <button type="button" className={styles.secondary} onClick={goNext}>Next chamber →</button>
             )}
-            {(selected.category === 'chamber' || selected.id === 'ai') && (
-              <a className={styles.primary} href={`/mindu?place=${selected.category === 'chamber' ? selected.id : currentId && chamberIds.includes(currentId) ? currentId : 'chamber1'}`}>Talk to Mindu</a>
-            )}
-            <button type="button" className={styles.link} onClick={() => share(selected)}>Share</button>
           </>
         );
 
@@ -380,16 +375,17 @@ export default function VenueMap() {
           onClose: () => setSelectedId(null),
           actions,
         };
-        if (selected.feature === 'sectors') return <HoloSectors key={selected.id} {...holoProps} />;
-        if (selected.feature === 'avatar') return <HoloAvatar key={selected.id} {...holoProps} />;
-        if (selected.feature === 'souvenir') return <HoloSouvenir key={selected.id} {...holoProps} />;
-        if (selected.feature === 'welcome') {
+        // Before "I'm here", a hologram room shows the plain card below.
+        if (holoOn && selected.feature === 'sectors') return <HoloSectors key={selected.id} {...holoProps} />;
+        if (holoOn && selected.feature === 'avatar') return <HoloAvatar key={selected.id} {...holoProps} />;
+        if (holoOn && selected.feature === 'souvenir') return <HoloSouvenir key={selected.id} {...holoProps} />;
+        if (holoOn && selected.feature === 'welcome') {
           return <HoloWelcome key={selected.id} {...holoProps} onStart={() => select('chamber1', true)} />;
         }
-        if (selected.feature === 'masterplan') {
+        if (holoOn && selected.feature === 'masterplan') {
           return <HoloMasterplan key={selected.id} {...holoProps} state={planState} onChange={setPlanState} />;
         }
-        if (selected.feature === 'vision') {
+        if (holoOn && selected.feature === 'vision') {
           return (
             <HoloVision
               key={selected.id}

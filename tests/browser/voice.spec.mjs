@@ -62,7 +62,7 @@ async function mockChat(page) {
 }
 const idle = page => expect(page.locator('.mg-stage')).toHaveAttribute('data-state', 'idle');
 async function say(page, text) {
-  await page.getByRole('button', { name: 'Speak to Mindu', exact: true }).click();
+  await page.getByRole('button', { name: 'Speak to GMC', exact: true }).click();
   await expect(page.locator('.mg-stage')).toHaveAttribute('data-state', 'listening');
   await page.evaluate(text => {
     const rec = window.capture.recognizers.at(-1);
@@ -107,7 +107,7 @@ test('recorded fallback selects the supported MIME type, uploads once, blocks du
     await route.fulfill({ json: { text: 'What is GMC?' } });
   });
   await openGuide(page, { mp4: testInfo.project.name === 'iphone-webkit' });
-  await page.getByRole('button', { name: 'Speak to Mindu', exact: true }).click();
+  await page.getByRole('button', { name: 'Speak to GMC', exact: true }).click();
   await page.getByRole('button', { name: 'Finish speaking' }).click();
   await expect(page.locator('.mg-status')).toHaveText('Transcribing…');
   await expect(page.getByRole('button', { name: 'Send', exact: true })).toBeDisabled();
@@ -126,7 +126,7 @@ test('permission denial, silent clips and transcription errors offer retry or ty
   const requests = await mockChat(page);
   await openGuide(page);
   await page.evaluate(() => { window.capture.denied = true; });
-  await page.getByRole('button', { name: 'Speak to Mindu', exact: true }).click();
+  await page.getByRole('button', { name: 'Speak to GMC', exact: true }).click();
   await expect(page.locator('.mg-status')).toContainText('Microphone access was denied');
   await expect(page.getByRole('button', { name: 'Type instead' })).toBeVisible();
   await page.evaluate(() => { window.capture.denied = false; window.capture.bytes = 0; });
@@ -152,7 +152,7 @@ test('recognition errors discard partial text and retry uses the recording endpo
   let uploads = 0;
   await page.route('**/api/transcribe', route => { uploads++; return route.fulfill({ json: { text: 'What is GMC?' } }); });
   await openGuide(page, { recognition: true });
-  await page.getByRole('button', { name: 'Speak to Mindu', exact: true }).click();
+  await page.getByRole('button', { name: 'Speak to GMC', exact: true }).click();
   await page.evaluate(() => {
     const rec = window.capture.recognizers[0];
     rec.onresult({ results: [[{ transcript: 'partial question' }]] });
@@ -172,15 +172,31 @@ test('recognition errors discard partial text and retry uses the recording endpo
 test('page hide cancels capture and ignores late callbacks while allowing capture after return', async ({ page }) => {
   const requests = await mockChat(page);
   await openGuide(page);
-  await page.getByRole('button', { name: 'Speak to Mindu', exact: true }).click();
+  await page.getByRole('button', { name: 'Speak to GMC', exact: true }).click();
   await page.evaluate(() => window.dispatchEvent(new Event('pagehide')));
   await idle(page);
   await expect(page.locator('.mg-user')).toHaveCount(0);
   await page.route('**/api/transcribe', route => route.fulfill({ json: { text: 'What is GMC?' } }));
-  await page.getByRole('button', { name: 'Speak to Mindu', exact: true }).click();
+  await page.getByRole('button', { name: 'Speak to GMC', exact: true }).click();
   await page.evaluate(() => window.capture.recorders[0].onstop());
   await expect(page.locator('.mg-stage')).toHaveAttribute('data-state', 'listening');
   await page.getByRole('button', { name: 'Finish speaking' }).click();
   await idle(page);
   expect(requests).toHaveLength(1);
+});
+
+test('upstream GMC branding, theme toggle and microphone opt-out survive integration', async ({ page }) => {
+  const requests = await mockChat(page);
+  await openGuide(page, { recognition: true });
+  await expect(page.locator('.mg-name')).toContainText('GMC');
+  const previousTheme = await page.locator('html').getAttribute('data-theme');
+  await page.locator('.ks-theme').click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', previousTheme === 'dark' ? 'light' : 'dark');
+  await page.evaluate(() => window.mountGuide(document.querySelector('#guide'), { wake: false, autoGreet: false, voice: false, mic: false }));
+  await expect(page.locator('.mg-mic')).toBeHidden();
+  await page.getByRole('textbox', { name: 'Your question' }).fill('What is GMC?');
+  await page.getByRole('button', { name: 'Send', exact: true }).click();
+  await idle(page);
+  expect(requests).toHaveLength(1);
+  expect(await page.evaluate(() => window.capture.recognizers.length)).toBe(0);
 });

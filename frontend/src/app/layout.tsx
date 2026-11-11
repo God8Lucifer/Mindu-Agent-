@@ -8,7 +8,7 @@ const lato = Lato({ variable: "--font-sans", subsets: ["latin"], weight: ["400",
 const lora = Lora({ variable: "--font-serif", subsets: ["latin"], weight: ["400", "700"] });
 
 export const metadata: Metadata = {
-  title: "Mindu — Your GMC journey",
+  title: "GMC — Your Experience Centre journey",
   description: "A personalised journey through the GMC Experience Centre.",
 };
 
@@ -16,9 +16,16 @@ export const viewport: Viewport = {
   themeColor: "#2d3a2b",
 };
 
+// Same light/dark choice as the Mindu agent (public/agent): saved in localStorage
+// under "mindu-theme", otherwise the device setting. Runs before first paint.
+const themeScript = `(function(){try{var t=localStorage.getItem('mindu-theme');if(t!=='light'&&t!=='dark')t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.dataset.theme=t;}catch(e){}})();`;
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${lato.variable} ${lora.variable}`}>
+    <html lang="en" className={`${lato.variable} ${lora.variable}`} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body>{children}</body>
     </html>
   );
