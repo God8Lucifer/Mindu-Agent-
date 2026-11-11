@@ -259,18 +259,3 @@
 .ks-veil-dark { background: #12172a; box-shadow: inset 0 0 0 1px #343c5c; }
 .ks-veil-dark .ks-veil-inner { color: #e9e4d8; }
 .ks-veil-dark .ks-veil-inner svg { color: #e8874a; }
-
-/* "Build my briefing" link under the side buttons */
-.ks-side a {
-  font: 600 12px system-ui, -apple-system, 'Segoe UI', sans-serif;
-  color: #646a82;
-  text-decoration: none;
-  text-align: center;
-  padding: 6px 10px;
-  border: 1px solid #e2ddd0;
-  border-radius: 999px;
-  background: #ffffff;
-  transition: color 0.2s, border-color 0.2s;
-}
-.ks-side a:hover { color: #e8874a; border-color: #e8874a; }
-:root[data-theme="dark"] .ks-side a { background: #1c2238; border-color: #343c5c; color: #a4aac0; }

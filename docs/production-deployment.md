@@ -29,3 +29,7 @@ Open the project owning `mindu-agent007.vercel.app`:
 Vercel's Git and deployment access is not connected in this workspace. No production alias, repository connection or environment variable was changed during this diagnosis. Connect the Vercel integration to allow these remaining steps to be completed directly. No secrets need to be pasted into chat.
 
 References: [Git deployments and production branch settings](https://vercel.com/docs/git), [promoting a deployment](https://vercel.com/docs/deployments/promoting-a-deployment).
+
+## Subsequent change
+
+The owner requested removal of the briefing feature. The briefing route, homepage link, export dependency, unused link styling and navigation test have been removed. For future deployment verification, test `/`, `/agent/guide/gmc-voice.js` and `/api/health`. A 404 at `/briefing` is now expected; earlier briefing checks above describe the historical diagnosis.

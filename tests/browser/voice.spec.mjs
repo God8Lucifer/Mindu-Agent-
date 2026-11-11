@@ -200,13 +200,3 @@ test('upstream GMC branding, theme toggle and microphone opt-out survive integra
   expect(requests).toHaveLength(1);
   expect(await page.evaluate(() => window.capture.recognizers.length)).toBe(0);
 });
-
-test('homepage briefing link opens the built briefing page', async ({ page }) => {
-  await openGuide(page);
-  const link = page.getByRole('link', { name: 'Build my briefing' });
-  await expect(link).toBeVisible();
-  await expect(link).toHaveAttribute('href', '/briefing');
-  await link.click();
-  await expect(page).toHaveURL(/\/briefing$/);
-  await expect(page.getByRole('heading', { name: 'Build your GMC briefing', exact: true })).toBeVisible();
-});
