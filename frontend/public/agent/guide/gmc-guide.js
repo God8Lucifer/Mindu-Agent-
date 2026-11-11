@@ -68,11 +68,11 @@
   }
 
   function mount(root, opts = {}) {
+    root.minduDestroy?.();
     const answer = opts.answer || scriptedAnswer;
     const voice = opts.voice !== false && 'speechSynthesis' in window;
-    const micOn = opts.mic !== false;
-    const Recognition = micOn && window.isSecureContext ? window.SpeechRecognition || window.webkitSpeechRecognition : null;
-    const canRecord = micOn && window.isSecureContext && !Recognition && opts.transcribe && navigator.mediaDevices?.getUserMedia && window.MediaRecorder;
+    let voiceInput;
+    let voicePhase = 'idle';
     const history = []; // { role: 'user' | 'assistant', content }
 
     root.classList.add('mg');
@@ -84,10 +84,14 @@
       </div>
       <p class="mg-name">GMC</p>
       <p class="mg-status" aria-live="polite"></p>
+      <div class="mg-voice-actions" hidden>
+        <button type="button" class="mg-retry">Try microphone again</button>
+        <button type="button" class="mg-type">Type instead</button>
+      </div>
       <div class="mg-log" role="log" aria-label="Conversation" aria-live="polite" tabindex="0"></div>
       <div class="mg-chips"></div>
       <form class="mg-input">
-        <button type="button" class="mg-mic" aria-label="Speak to GMC" ${micOn ? '' : 'hidden'}>
+        <button type="button" class="mg-mic" aria-label="Speak to GMC" hidden>
           <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
         </button>
         <input type="text" placeholder="Ask GMC anything…" aria-label="Your question" autocomplete="off" />
@@ -103,8 +107,10 @@
     const form = root.querySelector('.mg-input');
     const input = form.querySelector('input');
     const mic = form.querySelector('.mg-mic');
+    const send = form.querySelector('.mg-send');
+    const voiceActions = root.querySelector('.mg-voice-actions');
 
-    const LABELS = { wake: 'Waking up…', idle: 'Ask me anything', listening: 'Listening…', thinking: 'Thinking…', speaking: 'Speaking…' };
+    const LABELS = { wake: 'Waking up…', idle: 'Ask me anything', listening: 'Listening… Tap the microphone to finish.', transcribing: 'Transcribing…', requesting: 'Opening microphone…', thinking: 'Preparing a reply…', speaking: 'Speaking…' };
     let state = 'wake';
     let busy = false;
     let replyCount = 0;
@@ -127,6 +133,14 @@
       stage.dataset.state = next;
       status.textContent = LABELS[next] || '';
       root.dispatchEvent(new CustomEvent('mindu:state', { detail: next }));
+    }
+
+    function updateControls() {
+      send.disabled = busy || !!voiceInput?.active;
+      mic.disabled = busy || ['transcribing', 'requesting'].includes(voicePhase);
+      mic.setAttribute('aria-label', voicePhase === 'listening' ? 'Finish speaking' : 'Speak to GMC');
+      mic.setAttribute('aria-pressed', String(voicePhase === 'listening'));
+      mic.classList.toggle('mg-on', voicePhase === 'listening');
     }
 
     function addMessage(who, text) {
@@ -179,9 +193,12 @@
 
     async function ask(question) {
       question = question.trim();
-      if (!question || busy) return;
+      if (!question || busy || voiceInput?.active) return;
       busy = true;
       followLatest = true;
+      clearTimeout(typingTimer);
+      voiceActions.hidden = true;
+      updateControls();
       chips.hidden = true;
       addMessage('user', question);
       setState('thinking');
@@ -204,100 +221,68 @@
       if (reply && reply.sources) addSources(el, reply.sources);
       setState('idle');
       busy = false;
+      updateControls();
     }
 
     form.addEventListener('submit', (e) => {
       e.preventDefault();
+      if (busy || voiceInput?.active) return;
       const q = input.value;
       input.value = '';
       ask(q);
     });
 
-    // Typing counts as listening.
+    // Typed drafts remain separate from an active microphone capture.
     let typingTimer;
     input.addEventListener('input', () => {
-      if (busy) return;
-      setState(input.value ? 'listening' : 'idle');
+      if (busy || voiceInput?.active) return;
+      voiceActions.hidden = true;
+      setState('idle');
       clearTimeout(typingTimer);
-      typingTimer = setTimeout(() => !busy && setState('idle'), 2500);
+      typingTimer = setTimeout(() => !busy && !voiceInput?.active && setState('idle'), 2500);
     });
 
-    if (micOn && !Recognition && !canRecord) {
-      mic.addEventListener('click', () => {
-        status.textContent = window.isSecureContext
-          ? 'Voice input is unavailable in this browser. Please type your question.'
-          : 'Voice input needs an HTTPS connection. Please type your question here.';
-      });
-    } else if (Recognition) {
-      mic.addEventListener('click', () => {
-        if (busy) return;
-        const rec = new Recognition();
-        rec.lang = 'en-US';
-        rec.interimResults = true;
-        mic.classList.add('mg-on');
-        setState('listening');
-        rec.onresult = (e) => { input.value = Array.from(e.results).map((r) => r[0].transcript).join(''); };
-        rec.onend = () => {
-          mic.classList.remove('mg-on');
-          const q = input.value;
-          input.value = '';
-          if (q.trim()) ask(q); else setState('idle');
-        };
-        let recognitionError = '';
-        rec.onerror = (e) => {
-          recognitionError = e.error === 'not-allowed'
-            ? 'Microphone access was denied. Allow it in your browser, or type your question.'
-            : 'Voice input could not connect. Please try again or type your question.';
-          rec.stop();
-        };
-        rec.addEventListener('end', () => { if (recognitionError) status.textContent = recognitionError; });
-        try { rec.start(); }
-        catch {
-          mic.classList.remove('mg-on');
-          setState('idle');
-          status.textContent = 'Voice input could not start. Please type your question.';
-        }
-      });
-    } else if (canRecord) {
-      // No built-in speech recognition: record a clip and send it to `transcribe`.
-      let recorder = null;
-      mic.addEventListener('click', async () => {
-        if (recorder) { recorder.stop(); return; } // second tap stops recording
-        if (busy) return;
-        let stream;
-        try {
-          stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        } catch {
-          status.textContent = 'Microphone permission was blocked.';
-          return;
-        }
-        const chunks = [];
-        recorder = new MediaRecorder(stream);
-        recorder.ondataavailable = (e) => e.data.size && chunks.push(e.data);
-        recorder.onstop = async () => {
-          stream.getTracks().forEach((t) => t.stop());
-          mic.classList.remove('mg-on');
-          const blob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' });
-          recorder = null;
-          setState('thinking');
-          status.textContent = 'Listening back…';
-          try {
-            const q = await opts.transcribe(blob);
-            if (q && q.trim()) { setState('idle'); ask(q); return; }
-          } catch (err) {
-            console.error('Mindu transcription failed', err);
-            setState('idle');
-            status.textContent = (err && err.userMessage) || "I couldn't hear that. Please type your question.";
-            return;
-          }
-          setState('idle');
-        };
-        mic.classList.add('mg-on');
-        setState('listening');
-        recorder.start();
-        setTimeout(() => recorder && recorder.state === 'recording' && recorder.stop(), 15000);
-      });
-    }
+    voiceInput = opts.mic === false ? null : window.MinduVoice?.createVoiceInput({
+      transcribe: opts.transcribe,
+      onState(next) {
+        voicePhase = next;
+        clearTimeout(typingTimer);
+        if (next !== 'idle') voiceActions.hidden = true;
+        setState(next);
+        updateControls();
+      },
+      onTranscript(question) { ask(question); },
+      onError(message) {
+        status.textContent = message;
+        voiceActions.hidden = false;
+      },
+    });
+    mic.hidden = !voiceInput?.supported;
+    mic.addEventListener('click', () => {
+      if (busy || !voiceInput) return;
+      if (voiceInput.active) voiceInput.stop();
+      else {
+        if (voice) speechSynthesis.cancel();
+        voiceInput.start();
+      }
+    });
+    root.querySelector('.mg-retry').addEventListener('click', () => { if (!busy) voiceInput?.start(); });
+    root.querySelector('.mg-type').addEventListener('click', () => {
+      voiceInput?.cancel();
+      voiceActions.hidden = true;
+      input.focus();
+    });
+    const cancelVoice = () => { if (document.hidden) voiceInput?.cancel(); };
+    document.addEventListener('visibilitychange', cancelVoice);
+    const cancelOnPageHide = () => voiceInput?.cancel();
+    const destroy = () => {
+      clearTimeout(typingTimer);
+      voiceInput?.destroy();
+      document.removeEventListener('visibilitychange', cancelVoice);
+      window.removeEventListener('pagehide', cancelOnPageHide);
+    };
+    window.addEventListener('pagehide', cancelOnPageHide);
+    root.minduDestroy = destroy;
 
     const suggestions = opts.suggestions || ['What is GMC?', 'Where should I go?', 'Who are you?'];
     suggestions.forEach((s) => {
@@ -326,12 +311,12 @@
     if (history.length) { greeted = true; chips.hidden = true; }
 
     async function greet() {
-      if (greeted) return;
+      if (greeted || busy || voiceInput?.active) return;
       greeted = true;
       setState('speaking');
       const greeting = opts.greeting || "Kuzuzangpo la! I'm your GMC guide to Gelephu Mindfulness City.";
       await typeOut(addMessage('bot', ''), greeting);
-      setState('idle');
+      if (!busy && !voiceInput?.active) setState('idle');
     }
     setState(opts.wake === false ? 'idle' : 'wake');
     if (opts.autoGreet !== false) {
@@ -341,7 +326,7 @@
       })();
     }
 
-    return { setState, ask, greet, transcript: () => history.slice(), get state() { return state; } };
+    return { setState, ask, greet, destroy, transcript: () => history.slice(), get state() { return state; } };
   }
 
   window.MinduGuide = { mount, logoSvg };

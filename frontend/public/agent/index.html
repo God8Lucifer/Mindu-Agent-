@@ -64,6 +64,7 @@
       btn.addEventListener('click', function () { MinduTheme.toggle(); label(); });
     })();
   </script>
+  <script src="/agent/guide/gmc-voice.js"></script>
   <script src="/agent/guide/gmc-guide.js"></script>
   <script src="/agent/kiosk/kiosk.js"></script>
   <script>
@@ -86,9 +87,9 @@
           });
           return { text: data.answer, sources: data.sources };
         },
-        // Used for the mic only when the browser has no built-in speech recognition.
-        transcribe: async (blob) => {
+        transcribe: async (blob, { signal } = {}) => {
           const data = await api('/api/transcribe', {
+            signal,
             method: 'POST',
             headers: { 'Content-Type': blob.type.split(';')[0] || 'audio/webm' },
             body: blob,

@@ -101,6 +101,7 @@
     function showIntro({ animateLogo = false } = {}) {
       clearTimeout(qrTimer);
       busy = true;
+      currentGuide?.destroy?.();
       currentGuide = null;
       clearChat();
       if ('speechSynthesis' in window) speechSynthesis.cancel();

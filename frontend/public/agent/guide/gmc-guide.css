@@ -220,7 +220,7 @@
 #guide[data-conversation='reply'] { --mg-avatar-size: 112px; }
 #guide[data-conversation='conversation'] { --mg-avatar-size: 80px; }
 #guide[data-conversation='long'] { --mg-avatar-size: 64px; }
-#guide .mg-name, #guide .mg-status, #guide .mg-chips, #guide .mg-input { flex-shrink: 0; }
+#guide .mg-name, #guide .mg-status, #guide .mg-chips, #guide .mg-input, #guide .mg-voice-actions { flex-shrink: 0; }
 #guide .mg-log {
   flex: 1 1 0;
   min-height: 0;
@@ -244,3 +244,10 @@
 @media (prefers-reduced-motion: reduce) {
   #guide .mg-stage { transition: none; }
 }
+
+/* Keep voice recovery available without relying on a second permission prompt. */
+.mg-voice-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.mg-voice-actions[hidden] { display: none; }
+.mg-voice-actions button { min-height: 44px; padding: 8px 12px; border: 1px solid currentColor; border-radius: 12px; background: transparent; color: inherit; cursor: pointer; }
+.mg-input button:disabled { opacity: 0.5; cursor: wait; }
+[data-state='transcribing'] .mg-logo { animation: mg-tilt 2.8s ease-in-out infinite; }
