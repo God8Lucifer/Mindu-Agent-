@@ -4,6 +4,14 @@ import { respond, OUT_OF_SCOPE, INSTRUCTIONS } from '../src/ai.js';
 import { isClearlyUnrelated, contextualQuestion, unavailable } from '../src/scope.js';
 
 const history = [{ role: 'user', content: 'What are GMC economic sectors?' }, { role: 'assistant', content: 'GMC has eight priority sectors.' }];
+
+test('follow-ups retain the GMC topic across several turns but do not revive it after an off-topic refusal', () => {
+  const continuing = [...history, { role: 'user', content: 'Why?' }, { role: 'assistant', content: 'These sectors support the GMC vision.' }];
+  assert.equal(contextualQuestion('Tell me more.', continuing), history[0].content);
+  const redirected = [...continuing, { role: 'user', content: 'Tell me a joke.' }, { role: 'assistant', content: OUT_OF_SCOPE }];
+  assert.equal(contextualQuestion('Why?', redirected), '');
+  assert.equal(isClearlyUnrelated('Tell me a joke.', continuing), true);
+});
 test('clearly unrelated questions receive the same concise invitation with or without a key', async () => {
   const saved = process.env.OPENAI_API_KEY;
   try {

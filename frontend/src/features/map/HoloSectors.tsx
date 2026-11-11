@@ -89,7 +89,7 @@ export function HoloSectors({ eyebrow, title, intro, anchorRef, actions }: Props
 
   return (
     <>
-      <div ref={anchorRef} className={styles.anchor}>
+      <div ref={anchorRef} className={`${styles.anchor} ${styles.sectorAnchor}`} data-fit-panel="true">
         <div className={styles.holo}>
           <header className={styles.heading}>
             <p className={styles.eyebrow}>{eyebrow}</p>
@@ -164,7 +164,6 @@ export function HoloSectors({ eyebrow, title, intro, anchorRef, actions }: Props
             aria-labelledby="sector-title"
             onClick={e => e.stopPropagation()}
           >
-            <button type="button" className={styles.modalX} onClick={() => setActiveIdx(null)} aria-label="Close">×</button>
             <header className={styles.modalHead}>
               <span className={styles.modalIcon}><SectorIcon id={active.id} color={active.color} /></span>
               <div>

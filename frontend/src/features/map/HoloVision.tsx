@@ -235,7 +235,6 @@ export function HoloVision({ eyebrow, title, intro, onLitChange, anchorRef, acti
             aria-labelledby="vision-title"
             onClick={e => e.stopPropagation()}
           >
-            <button type="button" className={holo.modalX} onClick={() => openChapter(null)} aria-label="Close">×</button>
             <header className={holo.modalHead}>
               <span className={`${holo.modalIcon} ${styles.modalGlyph}`}><ChapterGlyph id={active.id} /></span>
               <div>

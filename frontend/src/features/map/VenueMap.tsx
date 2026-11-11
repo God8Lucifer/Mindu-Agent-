@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import Image from 'next/image';
+import { GmcLogo } from '@/components/GmcLogo';
 import { Canvas } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { CameraControlsImpl } from '@react-three/drei';
@@ -194,7 +194,6 @@ export default function VenueMap() {
       if (e.key === 'f' || e.key === 'F') { e.preventDefault(); setPanel(p => (p === 'find' ? null : 'find')); }
       else if (e.key === '/') { e.preventDefault(); setPanel('search'); }
       else if (e.key === 'r' || e.key === 'R') setShowRoute(s => !s);
-      else if (e.key === 't' || e.key === 'T') switchView(view === 'top' ? '3d' : 'top');
       else if (e.key === 'Escape') { setPanel(null); setSelectedId(null); overview(); }
     };
     window.addEventListener('keydown', onKey);
@@ -270,9 +269,7 @@ export default function VenueMap() {
       {/* Header */}
       <header className={styles.header}>
         <div className={styles.brand}>
-          <span className={styles.logoTile}>
-            <Image src="/gmc-logo-light.svg" alt="Gelephu Mindfulness City logo" width={34} height={34} unoptimized priority />
-          </span>
+          <GmcLogo />
           <div>
             <span className={styles.eyebrow}>Gelephu Mindfulness City</span>
             <strong>Experience Centre Map</strong>
@@ -284,14 +281,13 @@ export default function VenueMap() {
       <p className={styles.hints}>
         <span className={styles.hintMouse}>Drag rotates · Right-drag pans · Scroll zooms</span>
         <span className={styles.hintTouch}>Swipe pans · Two fingers rotate · Pinch zooms</span>
-        <span className={styles.hintKeys}><kbd>F</kbd> Find <kbd>/</kbd> Search <kbd>R</kbd> Route <kbd>T</kbd> Top view <kbd>Esc</kbd> Reset</span>
+        <span className={styles.hintKeys}><kbd>F</kbd> Find <kbd>/</kbd> Search <kbd>R</kbd> Route <kbd>Esc</kbd> Reset</span>
       </p>
       )}
 
       {/* View controls */}
       <div className={styles.viewRail} role="group" aria-label="View">
         <button type="button" className={view === '3d' ? styles.on : ''} onClick={() => switchView('3d')} disabled={holoOn} title={holoOn ? 'Tap outside the hologram to change the map view' : '3D view'}>3D</button>
-        <button type="button" className={view === 'top' ? styles.on : ''} onClick={() => switchView('top')} disabled={holoOn} title={holoOn ? 'Tap outside the hologram to change the map view' : 'Top view'}>Top</button>
         <button type="button" className={showRoute ? styles.on : ''} onClick={() => setShowRoute(s => !s)} aria-pressed={showRoute}>Route</button>
         <button type="button" onClick={() => { setSelectedId(null); overview(); }}>Reset</button>
       </div>
@@ -381,7 +377,7 @@ export default function VenueMap() {
         if (holoOn && selected.feature === 'avatar') return <HoloAvatar key={selected.id} {...holoProps} />;
         if (holoOn && selected.feature === 'souvenir') return <HoloSouvenir key={selected.id} {...holoProps} />;
         if (holoOn && selected.feature === 'welcome') {
-          return <HoloWelcome key={selected.id} {...holoProps} onStart={() => select('chamber1', true)} />;
+          return <HoloWelcome key={selected.id} {...holoProps} />;
         }
         if (holoOn && selected.feature === 'masterplan') {
           return <HoloMasterplan key={selected.id} {...holoProps} state={planState} onChange={setPlanState} />;
@@ -402,7 +398,6 @@ export default function VenueMap() {
 
         return (
           <article className={styles.card} aria-live="polite">
-            <button type="button" className={styles.cardClose} onClick={() => setSelectedId(null)} aria-label="Close">×</button>
             <div className={styles.cardHead}>
               <span className={`${styles.cardBadge} ${styles[`tone_${selected.category}`]}`}>
                 <PlaceGlyph place={selected} fallback={selected.category === 'access' ? '→' : '✦'} />

@@ -25,6 +25,20 @@ function setup(overrides = {}, hooks = {}) {
 }
 const flush = async () => { await Promise.resolve(); await Promise.resolve(); };
 
+test('HTTP phone origins offer a secure-connection message without opening or submitting a recording', async () => {
+  const flow = setup({ isSecureContext: false });
+  try {
+    await flow.input.start();
+    await flow.input.start();
+    assert.equal(flow.input.active, false);
+    assert.equal(flow.recorders.length, 0);
+    assert.equal(flow.uploads(), 0);
+    assert.deepEqual(flow.transcripts, []);
+    assert.match(flow.errors[0], /HTTPS/);
+    assert.match(flow.errors[0], /retry or type/);
+  } finally { flow.input.destroy(); }
+});
+
 test('old capture timeout cannot stop a new recording; duplicate start and stop upload once', async t => {
   t.mock.timers.enable({ apis: ['setTimeout'] });
   const flow = setup();

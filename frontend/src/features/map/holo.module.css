@@ -112,7 +112,7 @@
   font-size: 18px; line-height: 1; display: grid; place-items: center;
 }
 .close:hover { background: rgba(242, 212, 78, .18); }
-.cardBody { padding-right: 26px; animation: fade .3s ease; }
+.cardBody { padding-right: 0; animation: fade .3s ease; }
 @keyframes fade { from { opacity: 0; transform: translateY(6px); } }
 .cardEyebrow { margin: 0; font-size: 10.5px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--g-yellow); }
 .cardBody h3 { margin: 6px 0 8px; font-family: var(--font-serif), serif; font-size: 21px; font-weight: 800; color: #fff; }
@@ -152,7 +152,7 @@
   background: none; color: #1f2230 !important; font-size: 26px; line-height: 1; display: grid; place-items: center;
 }
 .modalX:hover { background: #f1f1f1; }
-.modalHead { display: flex; align-items: center; gap: 20px; padding-right: 40px; }
+.modalHead { display: flex; align-items: center; gap: 20px; }
 .modalIcon { width: 92px; height: 92px; flex: none; display: block; }
 .modalEyebrow { margin: 0 0 4px; font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--g-coral); }
 .modalHead h3 { margin: 0; font-size: 32px; font-weight: 900; line-height: 1.1; color: #1f2230; }
@@ -178,6 +178,8 @@
   .phoneOnly { display: block; }
   .desktopOnly { display: none !important; }
   .dialWrap { width: min(256px, 70vw, 34vh); }
+  .sectorAnchor .dialWrap { width: min(232px, 62vw, 28dvh, var(--sector-room, 232px)); }
+  .sectorAnchor .holo { gap: 10px; }
   .heading { max-width: min(220px, 55vw); padding: 4px 10px 6px; }
   .title { font-size: 16px; line-height: 1.15; }
   .eyebrow { font-size: 8px; letter-spacing: .18em; }
@@ -191,7 +193,7 @@
   .card::before { content: ''; position: absolute; top: 9px; left: calc(50% - 18px); width: 36px; height: 4px; border-radius: 999px; background: rgba(255, 250, 240, .35); }
   .close { top: 16px; right: 14px; width: 40px; height: 40px; }
   .cardBody { padding-right: 0; }
-  .cardEyebrow { padding-right: 44px; font-size: 11px; line-height: 1.6; letter-spacing: .1em; }
+  .cardEyebrow { padding-right: 0; font-size: 11px; line-height: 1.6; letter-spacing: .1em; }
   .cardBody h3 { font-size: 18px; line-height: 1.25; }
   .cardBody p { font-size: 13px; line-height: 1.5; margin: 8px 0 10px; }
   .cardBody ul { font-size: 12px; line-height: 1.5; gap: 6px; }
@@ -219,7 +221,7 @@
   .chamberPanel .cardBody ul { font-size: 13px; line-height: 1.6; }
   .chamberPanel .actions { flex-direction: row; align-items: center; margin-top: 14px; padding-top: 12px; gap: 10px; }
   .chamberPanel .actions button { flex: 1; width: auto; font-size: 11px; }
-  .chamberPanel .actions [class*='hereTag'] { font-size: 9px; letter-spacing: .03em; white-space: nowrap; }
+  .chamberPanel .actions [class*='hereTag'] { font-size: 15px; letter-spacing: normal; white-space: nowrap; }
   .chamberPanel:focus-visible { outline: 2px solid rgb(240, 131, 89); outline-offset: 2px; }
   .panelSelect { display: grid; gap: 6px; margin-top: 14px; font-size: 11px; letter-spacing: .04em; color: #e8eaf4; }
   .panelSelect select {

@@ -6,6 +6,7 @@ async function openGuide(page, { recognition = false, mp4 = false, secure = true
     if (!secure) Object.defineProperty(window, 'isSecureContext', { configurable: true, value: false });
     const NativeAudioContext = window.AudioContext || window.webkitAudioContext;
     window.capture = { stopped: 0, recorders: [], recognizers: [], denied: false, bytes: 2000, uploads: [] };
+    window.capture.nativeRecordingAvailable = !!(window.MediaRecorder && NativeAudioContext && NativeAudioContext.prototype.createMediaStreamDestination);
     const originalFetch = window.fetch.bind(window);
     window.fetch = (url, init) => {
       if (url === '/api/transcribe') window.capture.uploads.push({ size: init.body.size, type: init.body.type });
@@ -72,6 +73,66 @@ async function mockChat(page) {
   return requests;
 }
 const idle = page => expect(page.locator('.mg-stage')).toHaveAttribute('data-state', 'idle');
+
+test('recorded transcripts and typed messages reach the real chat endpoint with the same GMC context', async ({ page }) => {
+  const requests = [];
+  page.on('request', request => {
+    if (new URL(request.url()).pathname === '/api/chat') requests.push(request.postDataJSON());
+  });
+  const spoken = ['What is GMC?', 'Why?', 'Tell me a joke.'];
+  await page.route('**/api/transcribe', route => route.fulfill({ json: { text: spoken.shift() } }));
+  await openGuide(page);
+  const typedResponse = page.waitForResponse(response => new URL(response.url()).pathname === '/api/chat');
+  await page.getByRole('textbox', { name: 'Your question' }).fill('What is GMC?');
+  await page.getByRole('button', { name: 'Send', exact: true }).click();
+  const typed = await (await typedResponse).json();
+  await idle(page);
+  expect(typed.answer).toContain('Gelephu Mindfulness City');
+  for (let i = 0; i < 3; i++) {
+    const response = page.waitForResponse(response => new URL(response.url()).pathname === '/api/chat');
+    await page.getByRole('button', { name: 'Speak to GMC', exact: true }).click();
+    await page.getByRole('button', { name: 'Finish speaking' }).click();
+    const result = await (await response).json();
+    if (i === 0) expect(result.answer).toBe(typed.answer);
+    if (i === 1) expect(result.status).not.toBe('out-of-scope');
+    if (i === 2) expect(result.answer).toContain('Would you like to hear about the city’s vision or find an exhibit?');
+    await idle(page);
+  }
+  expect(requests).toHaveLength(4);
+  expect(requests.map(request => request.question)).toEqual(['What is GMC?', 'What is GMC?', 'Why?', 'Tell me a joke.']);
+  expect(requests.map(request => request.history.length)).toEqual([0, 2, 4, 6]);
+  expect(requests.every(request => request.chamberId === 'reception' && request.audience === 'general')).toBe(true);
+  await expect(page.locator('.mg-user')).toHaveText(requests.map(request => request.question));
+});
+
+test('real transcription service errors leave retry and typing available without sending a chat', async ({ page }) => {
+  const requests = await mockChat(page);
+  await openGuide(page);
+  // The test server deliberately has no API key. Exercise its real error response.
+  const transcription = page.waitForResponse(response => new URL(response.url()).pathname === '/api/transcribe');
+  await page.getByRole('button', { name: 'Speak to GMC', exact: true }).click();
+  await page.getByRole('button', { name: 'Finish speaking' }).click();
+  expect((await transcription).status()).toBe(503);
+  await expect(page.locator('.mg-status')).toContainText('couldn’t transcribe');
+  await expect(page.getByRole('button', { name: 'Try microphone again' })).toBeVisible();
+  await page.getByRole('button', { name: 'Type instead' }).click();
+  await expect(page.getByRole('textbox', { name: 'Your question' })).toBeFocused();
+  expect(requests).toHaveLength(0);
+});
+
+test('browsers without capture APIs offer a readable message and typing recovery', async ({ page }) => {
+  await openGuide(page);
+  await page.evaluate(() => {
+    window.SpeechRecognition = window.webkitSpeechRecognition = window.MediaRecorder = undefined;
+    Object.defineProperty(navigator, 'mediaDevices', { configurable: true, value: undefined });
+    window.mountGuide(document.querySelector('#guide'), { wake: false, autoGreet: false, voice: false });
+  });
+  await page.getByRole('button', { name: 'Speak to GMC', exact: true }).click();
+  await expect(page.locator('.mg-status')).toContainText('Voice input is unavailable');
+  await expect(page.getByRole('button', { name: 'Try microphone again' })).toBeVisible();
+  await page.getByRole('button', { name: 'Type instead' }).click();
+  await expect(page.getByRole('textbox', { name: 'Your question' })).toBeFocused();
+});
 async function say(page, text) {
   await page.getByRole('button', { name: 'Speak to GMC', exact: true }).click();
   await expect(page.locator('.mg-stage')).toHaveAttribute('data-state', 'listening');
@@ -268,6 +329,7 @@ test('native MediaRecorder encodes a generated audio stream and sends it once th
     return route.fulfill({ json: { text: 'What is GMC?' } });
   });
   await openGuide(page, { nativeRecording: true });
+  test.skip(!await page.evaluate(() => window.capture.nativeRecordingAvailable), 'This browser runtime lacks native MediaRecorder or generated audio streams; verify recording on a physical device.');
   await page.getByRole('button', { name: 'Speak to GMC', exact: true }).click();
   await page.waitForTimeout(1300);
   await page.getByRole('button', { name: 'Finish speaking' }).click();

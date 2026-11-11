@@ -1,0 +1,18 @@
+.tile {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  background: #1e2440;
+  border: 1px solid #343c5c;
+  box-sizing: border-box;
+}
+
+.tile img { display: block; width: 34px; height: 34px; }
+
+@media (max-width: 640px) {
+  .tile { width: 38px; height: 38px; }
+  .tile img { width: 30px; height: 30px; }
+}

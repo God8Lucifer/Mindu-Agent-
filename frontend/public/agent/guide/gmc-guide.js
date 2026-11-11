@@ -258,14 +258,20 @@
         voiceActions.hidden = false;
       },
     });
-    mic.hidden = !voiceInput?.supported;
+    // Insecure pages explain HTTPS up front; secure browsers retain recovery.
+    mic.hidden = opts.mic === false || window.isSecureContext === false;
     const voiceHint = root.querySelector('.mg-voice-hint');
     if (opts.mic !== false && voiceInput?.availabilityMessage) {
       voiceHint.textContent = voiceInput.availabilityMessage;
       voiceHint.hidden = false;
     }
     mic.addEventListener('click', () => {
-      if (busy || !voiceInput) return;
+      if (busy) return;
+      if (!voiceInput) {
+        status.textContent = 'Voice input is unavailable. Please type your question.';
+        voiceActions.hidden = false;
+        return;
+      }
       if (voiceInput.active) voiceInput.stop();
       else {
         if (voice) speechSynthesis.cancel();

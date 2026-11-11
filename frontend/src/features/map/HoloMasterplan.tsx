@@ -130,7 +130,6 @@ export function HoloMasterplan({ eyebrow, title, intro, anchorRef, state, onChan
             aria-labelledby="plan-title"
             onClick={e => e.stopPropagation()}
           >
-            <button type="button" className={holo.modalX} onClick={closeDetail} aria-label="Close">×</button>
             <header className={holo.modalHead}>
               <span className={styles.swatch} style={{ background: detailBody.color }} aria-hidden="true" />
               <div>

@@ -27,7 +27,7 @@ function loadList(): SouvenirId[] {
  * float out of it, circling slowly. Tapping one brings it to the front and
  * shows it in the card, where it can be saved to the visitor's list.
  */
-export function HoloSouvenir({ eyebrow, title, intro, anchorRef, onClose, actions }: Props) {
+export function HoloSouvenir({ eyebrow, title, intro, anchorRef, actions }: Props) {
   const [active, setActive] = useState<SouvenirId | null>(null);
   const [list, setList] = useState<SouvenirId[]>(() => loadList());
   const itemRefs = useRef(new Map<SouvenirId, HTMLButtonElement>());
@@ -119,7 +119,6 @@ export function HoloSouvenir({ eyebrow, title, intro, anchorRef, onClose, action
       </div>
 
       <aside className={holo.card} aria-live="polite">
-        <button type="button" className={holo.close} onClick={onClose} aria-label="Close hologram">×</button>
         {item ? (
           <div key={item.id} className={holo.cardBody}>
             <p className={holo.cardEyebrow}>{item.tagline}</p>

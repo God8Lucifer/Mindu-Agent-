@@ -13,7 +13,7 @@ export function ChamberPanel({ title, resetKey, className = '', children }: {
   const ref = useRef<HTMLElement>(null);
   useEffect(() => { ref.current?.scrollTo({ top: 0, behavior: 'instant' }); }, [resetKey]);
   return (
-    <aside ref={ref} className={`${styles.card} ${styles.chamberPanel} ${className}`} aria-label={`${title} details`} aria-live="polite" tabIndex={0}>
+    <aside ref={ref} className={`${styles.card} ${styles.chamberPanel} ${className}`} data-chamber-panel aria-label={`${title} details`} aria-live="polite" tabIndex={0}>
       {children}
     </aside>
   );
