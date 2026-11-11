@@ -71,7 +71,7 @@
   .stage { width: 90px; height: 130px; }
   .figure { width: 56px; height: 122px; }
   .pad { width: 70px; }
-  .chips { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
+  .chips { display: none; }
   .chips::-webkit-scrollbar { display: none; }
   .chip, .shuffle { flex: none; padding: 5px 10px; font-size: 11px; }
 }

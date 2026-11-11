@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useRef, type RefObject } from 'react';
+import { useLayoutEffect, useMemo, useRef, type ReactNode, type RefObject } from 'react';
 import { useFrame, type ThreeEvent } from '@react-three/fiber';
 import { CameraControls, CameraControlsImpl, Edges, Line } from '@react-three/drei';
 import * as THREE from 'three';
@@ -60,6 +60,7 @@ export function VenueScene({ controlsRef, theme, selectedId, holoId, labelRefs, 
       <CameraControls
         ref={controlsRef}
         makeDefault
+        enabled={!holoId}
         minDistance={10}
         maxDistance={140}
         maxPolarAngle={Math.PI / 2.3}
@@ -69,39 +70,68 @@ export function VenueScene({ controlsRef, theme, selectedId, holoId, labelRefs, 
       />
 
       <group key={theme}>
-      <Surroundings />
+      <MutedContext muted={!!selectedId} refreshKey={`${theme}:${showRoute}`}>
+        <Surroundings />
+        <NeutralFloors />
+        <Walls />
+        <Screens litRooms={litRooms} />
+        <Furniture />
+        {showRoute && <RouteLine />}
+      </MutedContext>
       <Ground onMiss={() => onSelect(null)} />
-      <NeutralFloors />
       {places.filter(p => p.zone).map(p => (
         <Zone key={p.id} place={p} selected={selectedId === p.id} dimmed={!!selectedId && selectedId !== p.id} onSelect={onSelect} />
       ))}
-      <Walls />
-      <Screens litRooms={litRooms} />
       {places.filter(p => p.feature === 'vision').map(p => (
         <ButterLamp3D key={p.id} at={p.holoAt ?? p.anchor} lit={litRooms.has(p.id)} />
       ))}
       {places.filter(p => p.feature === 'avatar').map(p => (
         <AvatarStand key={p.id} at={p.holoAt ?? p.anchor} height={p.holoBase ?? 1} />
       ))}
-      <Furniture />
-      {showRoute && <RouteLine />}
       {places.filter(p => p.feature).map(p => (
         <HoloBeam key={p.id} at={p.holoAt ?? p.anchor} base={p.holoBase ?? 1.02} top={p.holoHeight ?? HOLO_HEIGHT} active={holoId === p.id} />
       ))}
       {places.filter(p => p.feature === 'masterplan').map(p => (
-        <MasterplanHolo
-          key={p.id}
-          position={worldXYZ(p.holoAt ?? p.anchor, (p.holoHeight ?? HOLO_HEIGHT) + 0.25)}
-          scale={1.15}
-          active={holoId === p.id}
-          focus={planFocus}
-          onPickBridge={onPickBridge}
-        />
+        <group key={p.id} onClick={holoId === p.id ? event => event.stopPropagation() : undefined}>
+          <MasterplanHolo
+            position={worldXYZ(p.holoAt ?? p.anchor, (p.holoHeight ?? HOLO_HEIGHT) + 0.25)}
+            scale={1.3}
+            active={holoId === p.id}
+            focus={planFocus}
+            onPickBridge={onPickBridge}
+          />
+        </group>
       ))}
       </group>
       <LabelProjector labelRefs={labelRefs} />
     </>
   );
+}
+
+/** Tint the context without dimming the selected floor or its hologram. */
+function MutedContext({ muted, refreshKey, children }: { muted: boolean; refreshKey: string; children: ReactNode }) {
+  const ref = useRef<THREE.Group>(null);
+  useLayoutEffect(() => {
+    if (!muted || !ref.current) return;
+    const restore: (() => void)[] = [];
+    const tint = new THREE.Color(T.dimTo);
+    ref.current.traverse(object => {
+      const mesh = object as THREE.Mesh;
+      if (!mesh.material) return;
+      const original = mesh.material;
+      const originals = Array.isArray(original) ? original : [original];
+      const copies = originals.map(material => {
+        const copy = material.clone() as THREE.Material & { color?: THREE.Color; emissive?: THREE.Color };
+        copy.color?.lerp(tint, 0.65);
+        copy.emissive?.multiplyScalar(0.2);
+        return copy;
+      });
+      mesh.material = Array.isArray(original) ? copies : copies[0];
+      restore.push(() => { mesh.material = original; copies.forEach(material => material.dispose()); });
+    });
+    return () => restore.forEach(reset => reset());
+  }, [muted, refreshKey]);
+  return <group ref={ref}>{children}</group>;
 }
 
 function Ground({ onMiss }: { onMiss: () => void }) {
@@ -145,7 +175,7 @@ function Zone({ place, selected, dimmed, onSelect }: { place: Place; selected: b
 
   const base = zoneColors[place.id] ?? T.floor;
   const color = new THREE.Color(base);
-  if (dimmed) color.lerp(new THREE.Color(T.dimTo), 0.55);
+  if (dimmed) color.lerp(new THREE.Color(T.dimTo), 0.8);
 
   return (
     <mesh
@@ -157,8 +187,8 @@ function Zone({ place, selected, dimmed, onSelect }: { place: Place; selected: b
       onPointerOver={e => { e.stopPropagation(); document.body.style.cursor = 'pointer'; }}
       onPointerOut={() => { document.body.style.cursor = ''; }}
     >
-      <meshStandardMaterial color={color} emissive={base} emissiveIntensity={selected ? 0.35 : 0} />
-      <Edges color={selected ? T.outlineSelected : OUTLINE} threshold={20} />
+      <meshStandardMaterial color={color} emissive={base} emissiveIntensity={selected ? 0.45 : 0} />
+      <Edges color={selected ? T.outlineSelected : dimmed ? new THREE.Color(OUTLINE).lerp(new THREE.Color(T.dimTo), 0.75) : OUTLINE} threshold={20} />
     </mesh>
   );
 }

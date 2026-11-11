@@ -42,6 +42,6 @@ export const souvenirs: Souvenir[] = [
     id: 'postcard',
     title: 'Your Future Postcard',
     tagline: 'Made by you',
-    text: 'The postcard you create on your visit, with your own reflection on GMC’s future — pin a copy on the Postcard Board too.',
+    text: 'A postcard from your visit, with your own reflection on GMC’s future — a small keepsake to take home.',
   },
 ];

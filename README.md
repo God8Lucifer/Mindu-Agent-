@@ -48,15 +48,24 @@ Open **http://localhost:3000**. Everything is on this one address:
 ### QR handoff to a phone
 
 The kiosk generates a real QR link to the phone chat (`?mobile=1`). Scan it with
-the phone camera and open the link. Once the phone chat is ready, the kiosk plays
-the logo-to-QR animation, confirms “GMC is now on your phone”, and returns to a new
-QR code. The phone keeps its own working chat; no account or app install is needed.
+the phone camera and open the link. The phone shows an orange pairing frame while
+the kiosk sends its logo into the QR. Once that animation finishes, the phone's
+logo emerges from the QR and moves into chat. The kiosk confirms “GMC is now on
+your phone” and returns to a new QR code. The phone keeps its own working chat;
+no account or app install is needed. Interrupted pairing offers retry and direct
+chat options instead of leaving the visitor waiting.
 
 For local testing, keep the computer and phone on the same Wi-Fi with access
 between devices. The server must listen on `0.0.0.0:3000`; when the kiosk is opened
 on localhost, it uses the computer's LAN address in the QR. If there are multiple
 network adapters, open the kiosk using the desired LAN IP to select that address.
 The computer must stay running while the phone uses the local app.
+
+Phone browsers block live camera previews and microphone input on an HTTP LAN
+address. The photo page offers native “Take a photo” and gallery inputs as a
+fallback. Use a trusted HTTPS deployment to test live camera, camera switching,
+voice input and native sharing on phones. See `FEATURE_AUDIT.md` for verification
+results and remaining hardware checks.
 
 Handoff codes expire after ten minutes and renew automatically. Confirmation
 sessions are stored in memory for this local, single-server setup. Before deploying

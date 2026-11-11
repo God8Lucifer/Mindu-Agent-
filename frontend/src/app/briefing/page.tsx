@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { PageNav } from '@/components/PageNav';
 
 type Chamber = {
@@ -145,6 +146,19 @@ async function downloadBriefing(selected: Chamber[]) {
 }
 
 export default function BriefingPage() {
+  return <Suspense fallback={<p>Loading your briefing…</p>}><BriefingContent /></Suspense>;
+}
+
+function BriefingContent() {
+  const candidate = useSearchParams()?.get('back');
+  let back: string | null = null;
+  if (candidate) {
+    try {
+      const url = new URL(candidate, 'https://gmc.local');
+      // Return within this app, even if someone supplies an external origin.
+      if (url.protocol === 'http:' || url.protocol === 'https:') back = url.pathname + url.search;
+    } catch { /* Invalid return link. */ }
+  }
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -178,7 +192,7 @@ export default function BriefingPage() {
 
   return (
     <>
-    <PageNav />
+    <PageNav back={back} />
     <main className="briefing">
       <h1>Build your GMC briefing</h1>
       <p>Choose the chambers to include. Each becomes one editable PowerPoint slide.</p>

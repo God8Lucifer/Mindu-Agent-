@@ -194,3 +194,53 @@
 }
 .mg-sources a:hover { border-color: var(--mg-hot); color: var(--mg-text); }
 .mg-mode { margin: 0; font-size: 12px; color: var(--mg-muted); text-align: center; }
+
+/* The chat gets the available screen space; the logo yields as replies arrive. */
+#guide.mg {
+  position: fixed;
+  top: calc(72px + env(safe-area-inset-top, 0px));
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 32px);
+  max-width: 560px;
+  min-height: 0;
+  box-sizing: border-box;
+  --mg-avatar-size: 200px;
+}
+#guide.mg[hidden] { display: none; }
+#guide .mg-stage {
+  width: var(--mg-avatar-size);
+  height: var(--mg-avatar-size);
+  flex-shrink: 0;
+  transition: width 0.65s ease, height 0.65s ease;
+}
+#guide .mg-logo { width: 80%; height: 80%; }
+#guide .mg-ring { inset: 5%; }
+#guide[data-conversation='reply'] { --mg-avatar-size: 112px; }
+#guide[data-conversation='conversation'] { --mg-avatar-size: 80px; }
+#guide[data-conversation='long'] { --mg-avatar-size: 64px; }
+#guide .mg-name, #guide .mg-status, #guide .mg-chips, #guide .mg-input { flex-shrink: 0; }
+#guide .mg-log {
+  flex: 1 1 0;
+  min-height: 0;
+  max-height: none;
+  box-sizing: border-box;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+#guide .mg-log:focus-visible { outline: 2px solid var(--mg-hot); outline-offset: 2px; }
+#guide .mg-msg, #guide .mg-sources { flex-shrink: 0; }
+#guide .mg-input { box-sizing: border-box; }
+@media (max-width: 600px) {
+  #guide .mg-input input { font-size: 16px; }
+}
+@media (max-height: 520px) {
+  #guide.mg { --mg-avatar-size: 80px; gap: 6px; }
+  #guide[data-conversation='reply'], #guide[data-conversation='conversation'] { --mg-avatar-size: 64px; }
+  #guide[data-conversation='long'] { --mg-avatar-size: 48px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #guide .mg-stage { transition: none; }
+}

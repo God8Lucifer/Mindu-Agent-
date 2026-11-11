@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content" />
   <title>GMC Guide</title>
   <script>
     // Light / dark theme: the visitor's choice (saved), otherwise the device setting.
@@ -53,7 +53,6 @@
   <div class="ks-side">
     <button type="button" class="ks-map" aria-label="Open the Experience Centre map" title="Experience Centre map" hidden></button>
     <button type="button" class="ks-map" aria-label="Open the photo collection camera" title="Photo collection" hidden></button>
-    <a href="/briefing">Build my briefing</a>
   </div>
   <script>
     (function () {
@@ -106,7 +105,7 @@
       return window.guide;
     }
 
-    // Kiosk flow: QR / continue as guest → animated logo welcome → chat.
+    // Kiosk flow: scan QR → paired phone → shared GMC chat experience.
     MinduKiosk.start({
       intro: document.getElementById('intro'),
       guide: document.getElementById('guide'),

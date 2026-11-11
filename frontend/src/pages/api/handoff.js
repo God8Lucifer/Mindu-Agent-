@@ -38,7 +38,7 @@ export default async function handler(req, res) {
       url.searchParams.set('mobile', '1');
       url.searchParams.set('handoff', id);
       const svg = await QRCode.toString(url.href, { type: 'svg', margin: 4, errorCorrectionLevel: 'M' });
-      sessions.set(id, { claimed: false, expiresAt: now + TTL });
+      sessions.set(id, { claimed: false, connected: false, svg, expiresAt: now + TTL });
       return res.status(201).json({ id, url: url.href, svg });
     } catch (error) {
       return res.status(503).json({ error: error.message });
@@ -49,7 +49,7 @@ export default async function handler(req, res) {
     res.setHeader('Allow', 'GET, POST');
     return res.status(405).json({ error: 'Method not allowed.' });
   }
-  if (req.method === 'POST' && req.body?.action !== 'claim') {
+  if (req.method === 'POST' && !['claim', 'complete'].includes(req.body?.action)) {
     return res.status(400).json({ error: 'Unknown action.' });
   }
   const id = req.method === 'GET' ? req.query.id : req.body?.id;
@@ -58,6 +58,14 @@ export default async function handler(req, res) {
   }
   const session = sessions.get(id);
   if (!session) return res.status(410).json({ error: 'This QR has expired. Scan the current kiosk code.' });
-  if (req.method === 'POST') session.claimed = true;
-  return res.status(200).json({ claimed: session.claimed });
+  if (req.method === 'POST' && req.body.action === 'claim') session.claimed = true;
+  if (req.method === 'POST' && req.body.action === 'complete') {
+    if (!session.claimed) return res.status(409).json({ error: 'The phone has not connected yet.' });
+    session.connected = true;
+  }
+  return res.status(200).json({
+    claimed: session.claimed,
+    connected: session.connected === true,
+    ...(req.method === 'POST' && req.body.action === 'claim' ? { svg: session.svg } : {}),
+  });
 }

@@ -44,10 +44,26 @@
   text-decoration: none;
 }
 .theme:hover, .back:hover { transform: translateY(-1px); border-color: #e8874a; color: #e8874a; }
+.shortLabel { display: none; }
 .theme:focus-visible, .back:focus-visible { outline: 2px solid #e8874a; outline-offset: 2px; }
 @media (max-width: 520px) {
   .nav { top: 10px; right: 10px; gap: 8px; }
   .theme, .back { height: 38px; }
   .theme { width: 38px; }
   .back { padding: 0 14px; font-size: 13px; }
+}
+
+/* Map phones have a dedicated header row and a separate view toolbar. */
+@media (max-width: 720px) {
+  .mapNav {
+    top: calc(14px + env(safe-area-inset-top, 0px));
+    left: 16px;
+    right: 16px;
+    pointer-events: none;
+  }
+  .mapNav .theme, .mapNav .back { pointer-events: auto; height: 44px; }
+  .mapNav .theme { width: 44px; margin-left: auto; margin-top: 6px; }
+  .mapNav .back { position: absolute; left: 0; top: 73px; padding: 0 14px; font-size: 14px; }
+  .mapNav .fullLabel { display: none; }
+  .mapNav .shortLabel { display: inline; }
 }

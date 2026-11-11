@@ -22,9 +22,6 @@
 .modalHint { font-size: 13px; color: #6b6f80; }
 
 @media (max-width: 720px) {
-  /* One swipeable row of chips so the sheet stays short. */
-  .chips { gap: 5px; flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
-  .chips::-webkit-scrollbar { display: none; }
-  .chip { padding: 5px 9px; font-size: 11px; flex: none; }
+  .chips { display: none; }
   .note, .sub { display: none; }
 }

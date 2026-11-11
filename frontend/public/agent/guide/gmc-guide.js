@@ -71,22 +71,23 @@
     const answer = opts.answer || scriptedAnswer;
     const voice = opts.voice !== false && 'speechSynthesis' in window;
     const micOn = opts.mic !== false;
-    const Recognition = micOn ? window.SpeechRecognition || window.webkitSpeechRecognition : null;
-    const canRecord = micOn && !Recognition && opts.transcribe && navigator.mediaDevices && window.MediaRecorder;
+    const Recognition = micOn && window.isSecureContext ? window.SpeechRecognition || window.webkitSpeechRecognition : null;
+    const canRecord = micOn && window.isSecureContext && !Recognition && opts.transcribe && navigator.mediaDevices?.getUserMedia && window.MediaRecorder;
     const history = []; // { role: 'user' | 'assistant', content }
 
     root.classList.add('mg');
+    root.dataset.conversation = 'intro';
     root.innerHTML = `
       <div class="mg-stage" data-state="wake">
         <span class="mg-ring"></span><span class="mg-ring"></span><span class="mg-ring"></span>
         ${logoSvg()}
       </div>
-      <p class="mg-name">GMC <span>· your guide</span></p>
+      <p class="mg-name">GMC</p>
       <p class="mg-status" aria-live="polite"></p>
-      <div class="mg-log" role="log" aria-live="polite"></div>
+      <div class="mg-log" role="log" aria-label="Conversation" aria-live="polite" tabindex="0"></div>
       <div class="mg-chips"></div>
       <form class="mg-input">
-        <button type="button" class="mg-mic" aria-label="Speak to GMC" ${Recognition || canRecord ? '' : 'hidden'}>
+        <button type="button" class="mg-mic" aria-label="Speak to GMC" ${micOn ? '' : 'hidden'}>
           <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
         </button>
         <input type="text" placeholder="Ask GMC anything…" aria-label="Your question" autocomplete="off" />
@@ -106,6 +107,20 @@
     const LABELS = { wake: 'Waking up…', idle: 'Ask me anything', listening: 'Listening…', thinking: 'Thinking…', speaking: 'Speaking…' };
     let state = 'wake';
     let busy = false;
+    let replyCount = 0;
+    let followLatest = true;
+
+    function fitConversation() {
+      root.dataset.conversation = replyCount >= 4 ? 'long' : replyCount >= 2 ? 'conversation' : replyCount ? 'reply' : 'intro';
+    }
+
+    function scrollLatest() {
+      if (followLatest) log.scrollTop = log.scrollHeight;
+    }
+    log.addEventListener('scroll', () => {
+      followLatest = log.scrollHeight - log.scrollTop - log.clientHeight < 48;
+    }, { passive: true });
+    stage.addEventListener('transitionend', scrollLatest);
 
     function setState(next) {
       state = next;
@@ -119,16 +134,16 @@
       el.className = `mg-msg mg-${who}`;
       el.textContent = text;
       log.appendChild(el);
-      log.scrollTop = log.scrollHeight;
+      scrollLatest();
       return el;
     }
 
     async function typeOut(el, text) {
-      if (reduceMotion) { el.textContent = text; return; }
+      if (reduceMotion) { el.textContent = text; scrollLatest(); return; }
       el.textContent = '';
       for (const word of text.split(' ')) {
         el.textContent += (el.textContent ? ' ' : '') + word;
-        log.scrollTop = log.scrollHeight;
+        scrollLatest();
         await wait(70);
       }
     }
@@ -159,13 +174,14 @@
         box.appendChild(a);
       });
       el.after(box);
-      log.scrollTop = log.scrollHeight;
+      scrollLatest();
     }
 
     async function ask(question) {
       question = question.trim();
       if (!question || busy) return;
       busy = true;
+      followLatest = true;
       chips.hidden = true;
       addMessage('user', question);
       setState('thinking');
@@ -179,6 +195,8 @@
         reply = err && err.userMessage ? err.userMessage : "Sorry, I couldn't reach my answers just now. Please try again.";
       }
       const text = typeof reply === 'string' ? reply : (reply && reply.text) || '';
+      replyCount += 1;
+      fitConversation();
       if (ok) history.push({ role: 'user', content: question }, { role: 'assistant', content: text });
       setState('speaking');
       const el = addMessage('bot', '');
@@ -204,7 +222,13 @@
       typingTimer = setTimeout(() => !busy && setState('idle'), 2500);
     });
 
-    if (Recognition) {
+    if (micOn && !Recognition && !canRecord) {
+      mic.addEventListener('click', () => {
+        status.textContent = window.isSecureContext
+          ? 'Voice input is unavailable in this browser. Please type your question.'
+          : 'Voice input needs an HTTPS connection. Please type your question here.';
+      });
+    } else if (Recognition) {
       mic.addEventListener('click', () => {
         if (busy) return;
         const rec = new Recognition();
@@ -219,8 +243,20 @@
           input.value = '';
           if (q.trim()) ask(q); else setState('idle');
         };
-        rec.onerror = () => rec.stop();
-        rec.start();
+        let recognitionError = '';
+        rec.onerror = (e) => {
+          recognitionError = e.error === 'not-allowed'
+            ? 'Microphone access was denied. Allow it in your browser, or type your question.'
+            : 'Voice input could not connect. Please try again or type your question.';
+          rec.stop();
+        };
+        rec.addEventListener('end', () => { if (recognitionError) status.textContent = recognitionError; });
+        try { rec.start(); }
+        catch {
+          mic.classList.remove('mg-on');
+          setState('idle');
+          status.textContent = 'Voice input could not start. Please type your question.';
+        }
       });
     } else if (canRecord) {
       // No built-in speech recognition: record a clip and send it to `transcribe`.
@@ -284,7 +320,9 @@
       if (!m || typeof m.content !== 'string' || (m.role !== 'user' && m.role !== 'assistant')) return;
       addMessage(m.role === 'user' ? 'user' : 'bot', m.content);
       history.push({ role: m.role, content: m.content });
+      if (m.role === 'assistant') replyCount += 1;
     });
+    fitConversation();
     if (history.length) { greeted = true; chips.hidden = true; }
 
     async function greet() {

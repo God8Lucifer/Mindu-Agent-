@@ -145,13 +145,6 @@ export const places: Place[] = [
     anchor: [626, 400],
   },
   {
-    id: 'postcard',
-    name: 'Postcard Board',
-    category: 'service',
-    description: 'Write your reflection and pin your personalised Future Postcard before you leave.',
-    anchor: [688, 300],
-  },
-  {
     id: 'souvenir',
     name: 'Souvenir Shop',
     icon: 'bag',
@@ -266,6 +259,6 @@ export const route: Pt[] = [
 ];
 
 /** Order the visitor meets each place along the route. */
-export const routeOrder = ['entrance', 'reception', 'chamber1', 'chamber2', 'chamber3', 'chamber4', 'ai', 'postcard', 'souvenir', 'exit'];
+export const routeOrder = ['entrance', 'reception', 'chamber1', 'chamber2', 'chamber3', 'chamber4', 'ai', 'souvenir', 'exit'];
 
 export const chamberIds = places.filter(p => p.category === 'chamber').map(p => p.id);
