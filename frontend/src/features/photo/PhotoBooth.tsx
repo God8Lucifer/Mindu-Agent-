@@ -2,6 +2,7 @@
 // Photos here are local blob: URLs, which next/image can't optimise.
 /* eslint-disable @next/next/no-img-element */
 
+import { PageNav } from '@/components/PageNav';
 import Image from 'next/image';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SHOTS_PER_CHAMBER, chambers, isChamber, type Chamber } from './chambers';
@@ -9,9 +10,11 @@ import { buildCollection } from './compose';
 import { PHOTO_H, PHOTO_W, canvasToBlob, loadImage } from './frame';
 import { frameById, frames, prepareFrames, renderFramed, type Assets, type FrameDef, type FrameInfo } from './frames';
 import { clearAll, loadAll, saveChamber } from './store';
+import { buildChamberCard } from './strip';
 import styles from './photo.module.css';
 
-type View = { kind: 'hub' } | { kind: 'shoot'; chamber: Chamber } | { kind: 'result' };
+/** `single`: retake just that photo (0-based) instead of the whole chamber. */
+type View = { kind: 'hub' } | { kind: 'shoot'; chamber: Chamber; single?: number } | { kind: 'result' };
 
 const BACK_KEY = 'mindu-photo-back-url';
 
@@ -30,6 +33,8 @@ export function PhotoBooth() {
   const [loaded, setLoaded] = useState(false);
   const [view, setView] = useState<View>({ kind: 'hub' });
   const [startPlace, setStartPlace] = useState<string | undefined>();
+  // The chamber tab the visitor chose; kept while they shoot or view the collection.
+  const [picked, setPicked] = useState<string | null>(null);
   // Opened from the Mindu kiosk guide (?back=<url>): the header link returns there.
   const [backToMindu, setBackToMindu] = useState<string | null>(null);
 
@@ -53,10 +58,15 @@ export function PhotoBooth() {
     return () => { alive = false; };
   }, []);
 
-  const finishChamber = async (chamber: Chamber, photos: Blob[]) => {
-    setShots(prev => ({ ...prev, [chamber.id]: photos }));
+  const finishChamber = async (chamber: Chamber, photos: Blob[], single?: number) => {
+    let next = photos;
+    if (single !== undefined) {
+      next = [...(shots[chamber.id] ?? [])];
+      next[single] = photos[0];
+    }
+    setShots(prev => ({ ...prev, [chamber.id]: next }));
     setView({ kind: 'hub' });
-    await saveChamber(chamber.id, photos);
+    await saveChamber(chamber.id, next);
   };
 
   const startOver = async () => {
@@ -69,15 +79,22 @@ export function PhotoBooth() {
   return (
     <div className={styles.page}>
       {view.kind === 'shoot' && (
-        <Shoot chamber={view.chamber} onDone={p => finishChamber(view.chamber, p)} onCancel={() => setView({ kind: 'hub' })} />
+        <Shoot
+          chamber={view.chamber}
+          single={view.single}
+          onDone={p => finishChamber(view.chamber, p, view.single)}
+          onCancel={() => setView({ kind: 'hub' })}
+        />
       )}
+      {view.kind === 'hub' && <PageNav back={backToMindu} />}
       {view.kind === 'hub' && (
         <Hub
           shots={shots}
           loaded={loaded}
           focus={startPlace}
-          backToMindu={backToMindu}
-          onShoot={chamber => setView({ kind: 'shoot', chamber })}
+          picked={picked}
+          onPick={setPicked}
+          onShoot={(chamber, single) => { setPicked(chamber.id); setView({ kind: 'shoot', chamber, single }); }}
           onBuild={() => setView({ kind: 'result' })}
           onStartOver={startOver}
         />
@@ -89,69 +106,157 @@ export function PhotoBooth() {
 
 /* ---------------------------------------------------------------- hub */
 
-function Hub({ shots, loaded, focus, backToMindu, onShoot, onBuild, onStartOver }: {
+const pad2 = (n: string) => n.padStart(2, '0');
+
+/**
+ * Compact layout: chamber tabs, one chamber card at a time (tap a slot to shoot),
+ * and a bar under it with progress, Start over and Make collection.
+ */
+function Hub({ shots, loaded, focus, picked, onPick, onShoot, onBuild, onStartOver }: {
   shots: Record<string, Blob[]>;
   loaded: boolean;
   focus?: string;
-  backToMindu: string | null;
-  onShoot: (c: Chamber) => void;
+  picked: string | null;
+  onPick: (id: string) => void;
+  onShoot: (c: Chamber, single?: number) => void;
   onBuild: () => void;
   onStartOver: () => void;
 }) {
   const urls = useObjectUrls(shots);
   const doneCount = chambers.filter(c => shots[c.id]?.length).length;
+  const photoCount = chambers.reduce((n, c) => n + (shots[c.id]?.length ?? 0), 0);
+  const total = chambers.length * SHOTS_PER_CHAMBER;
+
+  // Open on the chamber the visitor came from, else the first one still to shoot.
+  const activeId = picked
+    ?? (isChamber(focus) ? focus : undefined)
+    ?? chambers.find(c => !shots[c.id]?.length)?.id
+    ?? chambers[0].id;
+  const active = chambers.find(c => c.id === activeId) ?? chambers[0];
+  const photos = urls[active.id] ?? [];
+
+  const tabsRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    tabsRef.current?.querySelector<HTMLElement>('[aria-selected="true"]')?.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
+  }, [activeId]);
+
+  const [saving, setSaving] = useState(false);
+  const saveChamberCard = async () => {
+    const blobs = shots[active.id];
+    if (!blobs?.length) return;
+    setSaving(true);
+    try {
+      const card = await buildChamberCard(active, blobs);
+      const url = URL.createObjectURL(card);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `gmc-chamber-${active.number}-${active.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}.jpg`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div className={styles.hub}>
       <header className={styles.hubHead}>
-        <a href={backToMindu ?? '/map'} className={styles.back}>{backToMindu ? '← Mindu' : '← Map'}</a>
         <span className={styles.logoTile}>
           <Image src="/gmc-logo-light.svg" alt="" width={30} height={30} unoptimized />
         </span>
       </header>
 
       <div className={styles.intro}>
-        <span className={styles.eyebrow}>Photo collection</span>
+        <div className={styles.introTop}>
+          <span className={styles.eyebrow}>Photo collection</span>
+          <span className={styles.counter}>{photoCount}/{total} photos</span>
+        </div>
         <h1>Capture your journey</h1>
-        <p>Take {SHOTS_PER_CHAMBER} photos in each chamber. At the end, we put them together into one collection with a cover, ready to share.</p>
+        <p>Take {SHOTS_PER_CHAMBER} photos in each chamber. We put them together into one collection, ready to share.</p>
       </div>
 
-      <ol className={styles.chamberList}>
+      <div className={styles.tabs} role="tablist" aria-label="Chambers" ref={tabsRef}>
         {chambers.map(c => {
-          const photos = urls[c.id] ?? [];
-          const done = photos.length > 0;
+          const done = (shots[c.id]?.length ?? 0) >= SHOTS_PER_CHAMBER;
+          const on = c.id === active.id;
           return (
-            <li key={c.id} className={`${styles.chamberCard} ${focus === c.id ? styles.focus : ''}`}>
-              <div className={styles.chamberHead}>
-                <span className={styles.chamberNum}>{c.number}</span>
-                <div>
-                  <span className={styles.eyebrow}>Chamber {c.number}</span>
-                  <strong>{c.name}</strong>
-                </div>
-                <button type="button" className={done ? styles.ghostBtn : styles.primaryBtn} onClick={() => onShoot(c)} disabled={!loaded}>
-                  {done ? 'Retake' : '◉ Shoot'}
-                </button>
-              </div>
-              <div className={styles.slots}>
-                {Array.from({ length: SHOTS_PER_CHAMBER }, (_, i) => (
-                  <span key={i} className={styles.slot}>
-                    {photos[i]
-                      ? <img src={photos[i]} alt={`Chamber ${c.number}, photo ${i + 1}`} />
-                      : <span className={styles.slotEmpty}>{i + 1}</span>}
-                  </span>
-                ))}
-              </div>
-            </li>
+            <button
+              key={c.id}
+              type="button"
+              role="tab"
+              aria-selected={on}
+              className={`${styles.tab} ${on ? styles.tabOn : ''}`}
+              onClick={() => onPick(c.id)}
+            >
+              <span className={`${styles.tabNum} ${done ? styles.tabDone : ''}`}>{done ? '✓' : c.number}</span>
+              {c.name}
+            </button>
           );
         })}
-      </ol>
+      </div>
 
-      <div className={styles.hubFoot}>
-        <p>{doneCount} of {chambers.length} chambers captured</p>
-        <button type="button" className={styles.bigBtn} onClick={onBuild} disabled={!doneCount}>
-          {doneCount === chambers.length ? '✦ Create my collection' : doneCount ? '✦ Create collection now' : 'Shoot a chamber to begin'}
-        </button>
-        {doneCount > 0 && <button type="button" className={styles.linkBtn} onClick={onStartOver}>Start over</button>}
+      <section className={styles.chamberCard} role="tabpanel" aria-label={active.name}>
+        <div className={styles.chamberHead}>
+          <div>
+            <span className={styles.chamberEyebrow}>Chamber {pad2(active.number)}</span>
+            <strong>{active.name}</strong>
+          </div>
+          <span className={styles.counter}>{photos.length}/{SHOTS_PER_CHAMBER}</span>
+        </div>
+
+        <div className={styles.slots}>
+          {Array.from({ length: SHOTS_PER_CHAMBER }, (_, i) => (
+            photos[i] ? (
+              <button
+                key={i}
+                type="button"
+                className={styles.slot}
+                onClick={() => onShoot(active, i)}
+                disabled={!loaded}
+                aria-label={`Retake photo ${i + 1}`}
+                title="Retake this photo"
+              >
+                <img src={photos[i]} alt="" />
+                <span className={styles.slotRetake} aria-hidden>↻</span>
+              </button>
+            ) : (
+              <button key={i} type="button" className={`${styles.slot} ${styles.slotEmpty}`} onClick={() => onShoot(active)} disabled={!loaded}>
+                <svg viewBox="0 0 24 24" aria-hidden><path d="M4 8.5h3l1.6-2.5h6.8L17 8.5h3v10.5H4z" /><circle cx="12" cy="13.5" r="3.4" /></svg>
+                <span>Photo {i + 1}</span>
+                <small>Tap to shoot</small>
+              </button>
+            )
+          ))}
+        </div>
+
+        {photos.length > 0 && (
+          <div className={styles.cardActions}>
+            <button type="button" className={styles.ghostBtn} onClick={saveChamberCard} disabled={saving}>
+              {saving ? 'Saving…' : '⤓ Save chamber'}
+            </button>
+            <button type="button" className={styles.ghostBtn} onClick={() => onShoot(active)} disabled={!loaded}>↻ Retake all</button>
+          </div>
+        )}
+      </section>
+
+      <div className={styles.bottomBar}>
+        <div className={styles.bottomInner}>
+          <div className={styles.bottomInfo}>
+            <span className={styles.chamberNum}>{active.number}</span>
+            <div>
+              <strong>Chamber {pad2(active.number)}</strong>
+              <small>{Math.round((photos.length / SHOTS_PER_CHAMBER) * 100)}% complete · {doneCount}/{chambers.length} chambers</small>
+            </div>
+          </div>
+          {photoCount > 0 && <button type="button" className={styles.linkBtn} onClick={onStartOver}>Start over</button>}
+          <button
+            type="button"
+            className={styles.primaryBtn}
+            onClick={onBuild}
+            disabled={!doneCount}
+            title={doneCount ? 'Build and save your collection' : 'Shoot a chamber first'}
+          >✦ Make collection</button>
+        </div>
       </div>
     </div>
   );
@@ -159,7 +264,7 @@ function Hub({ shots, loaded, focus, backToMindu, onShoot, onBuild, onStartOver 
 
 /* --------------------------------------------------------------- shoot */
 
-function Shoot({ chamber, onDone, onCancel }: { chamber: Chamber; onDone: (photos: Blob[]) => void; onCancel: () => void }) {
+function Shoot({ chamber, single, onDone, onCancel }: { chamber: Chamber; single?: number; onDone: (photos: Blob[]) => void; onCancel: () => void }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const previewRef = useRef<HTMLCanvasElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -171,7 +276,9 @@ function Shoot({ chamber, onDone, onCancel }: { chamber: Chamber; onDone: (photo
   const [pending, setPending] = useState<{ blob: Blob; url: string } | null>(null);
   const [count, setCount] = useState<number | null>(null);
   const [flash, setFlash] = useState(false);
-  const shotNo = Math.min(kept.length + 1, SHOTS_PER_CHAMBER);
+  // Retaking one photo keeps its number (and frame text) from the original set.
+  const shotNo = single !== undefined ? single + 1 : Math.min(kept.length + 1, SHOTS_PER_CHAMBER);
+  const needed = single !== undefined ? 1 : SHOTS_PER_CHAMBER;
 
   // Camera stream
   useEffect(() => {
@@ -267,7 +374,7 @@ function Shoot({ chamber, onDone, onCancel }: { chamber: Chamber; onDone: (photo
     if (!pending) return;
     const next = [...kept, pending.blob];
     setPending(null);
-    if (next.length >= SHOTS_PER_CHAMBER) onDone(next);
+    if (next.length >= needed) onDone(next);
     else setKept(next);
   };
 
@@ -311,7 +418,7 @@ function Shoot({ chamber, onDone, onCancel }: { chamber: Chamber; onDone: (photo
 
       <div className={styles.progressDots} aria-hidden>
         {Array.from({ length: SHOTS_PER_CHAMBER }, (_, i) => (
-          <span key={i} className={i < kept.length ? styles.dotDone : i === kept.length ? styles.dotNow : ''} />
+          <span key={i} className={single !== undefined ? (i === single ? styles.dotNow : styles.dotDone) : i < kept.length ? styles.dotDone : i === kept.length ? styles.dotNow : ''} />
         ))}
       </div>
 
@@ -320,7 +427,7 @@ function Shoot({ chamber, onDone, onCancel }: { chamber: Chamber; onDone: (photo
           <>
             <button type="button" className={styles.ghostBtnDark} onClick={() => setPending(null)}>↺ Retake</button>
             <button type="button" className={styles.primaryBtn} onClick={keep}>
-              {kept.length + 1 >= SHOTS_PER_CHAMBER ? '✓ Keep & finish' : '✓ Keep, next photo'}
+              {kept.length + 1 >= needed ? '✓ Keep & finish' : '✓ Keep, next photo'}
             </button>
           </>
         ) : (

@@ -69,6 +69,39 @@
   --p108-body: #5a4a44;
 }
 
+:root { color-scheme: light; }
+
+/* Dark mode (set by the theme script in app/layout.tsx, same choice as the agent). */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --tour-ink: #eef0f6;
+  --tour-body: #c9cde0;
+  --tour-muted: #a4aac0;
+  --tour-brown: #c9a58a;
+  --tour-accent: #e0b765;
+  --tour-navy: #9aa3d6;
+  --tour-surface: #12172a;
+  --tour-card: #1c2238;
+  --tour-border: #343c5c;
+  --tour-panel: #1c22386b;
+  --tour-panel-strong: #1c2238d9;
+  --tour-hairline: #eef0f624;
+  --primary-foreground: #12172a;
+  --secondary: #252c47;
+  --secondary-foreground: #eef0f6;
+  --muted: #252c47;
+  --muted-foreground: #a4aac0;
+  --accent: #343c5c;
+  --accent-foreground: #eef0f6;
+  --border: #343c5c;
+  --input: #343c5c;
+  --card: #1c2238;
+  --card-foreground: #eef0f6;
+  --popover: #1c2238;
+  --popover-foreground: #eef0f6;
+  --ring: oklch(80% 0 0);
+}
+
 *,
 *::before,
 *::after {

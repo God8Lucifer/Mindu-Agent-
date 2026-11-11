@@ -15,15 +15,13 @@
   color: var(--mg-text);
   font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
-@media (prefers-color-scheme: dark) {
-  .mg {
-    --mg-ink: #e9e4d8;
-    --mg-bg: #1c2238;
-    --mg-soft: #252c47;
-    --mg-text: #eef0f6;
-    --mg-muted: #a4aac0;
-    --mg-border: #343c5c;
-  }
+:root[data-theme="dark"] .mg {
+  --mg-ink: #e9e4d8;
+  --mg-bg: #1c2238;
+  --mg-soft: #252c47;
+  --mg-text: #eef0f6;
+  --mg-muted: #a4aac0;
+  --mg-border: #343c5c;
 }
 
 /* ---- logo stage ---- */

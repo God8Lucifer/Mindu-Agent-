@@ -46,24 +46,9 @@
   background: var(--ink); border-radius: calc(var(--radius) - 2px);
 }
 .logoTile img { width: 34px; height: 34px; display: block; }
+:global(:root[data-theme="dark"]) .logoTile { background: #0d1120; border: 1px solid var(--line); }
 .brand strong { display: block; font-weight: 900; font-size: 16px; line-height: 1.15; color: var(--ink); }
 .brand .eyebrow { display: block; margin-bottom: 2px; }
-
-.progress {
-  display: flex; align-items: center; gap: 12px; font-size: 13px; color: var(--body);
-  background: var(--tour-panel-strong);
-  backdrop-filter: blur(10px);
-  border: 1px solid var(--line); border-radius: var(--radius); padding: 6px 6px 6px 14px;
-  box-shadow: var(--shadow);
-}
-.progress b { font-size: 15px; font-weight: 900; color: var(--ink); }
-.progress button {
-  border: 0; background: var(--ink); color: var(--primary-foreground) !important;
-  font-weight: 700; font-size: 11px; letter-spacing: .08em; text-transform: uppercase;
-  border-radius: calc(var(--radius) - 2px); padding: 9px 12px;
-}
-.progress button:hover { background: var(--body); }
-.done { color: var(--body); font-weight: 700; padding-right: 8px; }
 
 .hints {
   position: absolute; top: 80px; left: 50%; transform: translateX(-50%);
@@ -148,10 +133,6 @@
 }
 .dock button:hover { border-color: var(--gold); }
 .dock .dockOn { border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink), var(--shadow); }
-.dock .dockGuide { display: inline-flex; align-items: center; border: 1px solid var(--gold); background: var(--ink); color: var(--primary-foreground); border-radius: var(--radius); padding: 11px 16px; font-weight: 800; font-size: 12px; letter-spacing: .05em; text-decoration: none; box-shadow: var(--shadow); }
-.dock .dockGuide:hover { background: var(--body); }
-.dock .dockPhoto { display: inline-flex; align-items: center; border: 1px solid var(--line); background: var(--card-bg); color: var(--ink); border-radius: var(--radius); padding: 11px 16px; font-weight: 700; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; text-decoration: none; box-shadow: var(--shadow); }
-.dock .dockPhoto:hover { border-color: var(--gold); }
 
 /* ---------- find / search panel ---------- */
 .panel {
@@ -237,13 +218,11 @@
 
 /* ---------- phone ---------- */
 @media (max-width: 720px) {
-  .dock .dockGuide, .dock .dockPhoto { padding: 10px 11px; font-size: 11px; }
   .dock { right: 16px; gap: 6px; }
   .dock > * { flex: 1 1 auto; justify-content: center; }
   .dock button { padding: 10px 8px; }
   .header { flex-direction: column; align-items: stretch; gap: 8px; }
   .brand { align-self: flex-start; }
-  .progress { justify-content: space-between; font-size: 12px; }
   .hints { top: auto; bottom: 84px; left: 16px; transform: none; font-size: 11px; }
   .labelText { display: none; }
   .labelSelected .labelText, .labelCurrent .labelText { display: block; }

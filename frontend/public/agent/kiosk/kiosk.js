@@ -38,6 +38,9 @@
     </svg>`;
   }
 
+  // Every page shares the light/dark choice (data-theme on <html>).
+  const isDark = () => document.documentElement.dataset.theme === 'dark';
+
   const ICONS = {
     map: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6.5l6-2.5 6 2.5 6-2.5v13.5l-6 2.5-6-2.5-6 2.5z"/><path d="M9 4v13.5M15 6.5V20"/></svg>`,
     photo: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8.5h3l1.6-2.5h6.8L17 8.5h3v10.5H4z"/><circle cx="12" cy="13.5" r="3.4"/></svg>`,
@@ -45,8 +48,8 @@
 
   /*
    * links: side buttons in the chat that open other pages of the experience, e.g.
-   *   [{ id: 'map', button, url, label: 'Opening the Experience Centre map…', dark: false }]
- * `dark: true` paints the transition circle navy (for pages in the dark agent theme).
+   *   [{ id: 'map', button, url, label: 'Opening the Experience Centre map…' }]
+   * The transition circle follows the light/dark theme, like the pages it opens.
    * The page is opened with ?back=<this page>?from=<id> so it can link back here.
    */
   function start({ intro, guide: guideEl, mountGuide, restart, links = [] }) {
@@ -90,11 +93,11 @@
             <span class="mg-ring"></span><span class="mg-ring"></span><span class="mg-ring"></span>
             ${MinduGuide.logoSvg()}
           </div>
-          <p class="ks-title">Mindu<span>Your guide to Gelephu Mindfulness City</span></p>
+          <p class="ks-title">GMC<span>Your guide to Gelephu Mindfulness City</span></p>
         </div>
         <div class="ks-welcome"><div class="ks-welcome-inner">
           <button type="button" class="ks-qr" aria-label="Demo QR code. Tap to simulate a scan.">${mockQr()}</button>
-          <p class="ks-qr-label">Scan with your phone to take Mindu with you</p>
+          <p class="ks-qr-label">Scan with your phone to take the GMC guide with you</p>
           <p class="ks-qr-hint">Demo: tap the code to simulate a scan</p>
           <div class="ks-or"><span>or</span></div>
           <button type="button" class="ks-guest">Continue as guest</button>
@@ -151,7 +154,7 @@
       intro.dataset.step = 'sent';
       intro.querySelector('.ks-done').innerHTML = `
         <div class="ks-check" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
-        <p class="ks-done-title">Mindu is now on your phone</p>
+        <p class="ks-done-title">Your GMC guide is now on your phone</p>
         <p class="ks-done-sub">Enjoy the GMC Experience Centre. Your guide goes with you.</p>`;
       await wait(4200);
       showIntro();
@@ -175,7 +178,7 @@
       if (busy) return;
       busy = true;
       if ('speechSynthesis' in window) speechSynthesis.cancel();
-      const veil = veilAt(link.button, `ks-veil${link.dark ? ' ks-veil-dark' : ''}`);
+      const veil = veilAt(link.button, `ks-veil${isDark() ? ' ks-veil-dark' : ''}`);
       veil.innerHTML = `<div class="ks-veil-inner">${ICONS[link.id] || ''}<p>${link.label || 'Opening…'}</p></div>`;
       requestAnimationFrame(() => veil.classList.add('ks-veil-open'));
       if (currentGuide) saveChat(currentGuide.transcript());
@@ -197,7 +200,7 @@
       if (restart) restart.hidden = false;
       showLinks(true);
 
-      const veil = veilAt(link.button, `ks-veil ks-veil-open ks-veil-back${link.dark ? ' ks-veil-dark' : ''}`);
+      const veil = veilAt(link.button, `ks-veil ks-veil-open ks-veil-back${isDark() ? ' ks-veil-dark' : ''}`);
       await wait(150);
       veil.classList.remove('ks-veil-open');
       guideEl.classList.add('ks-in');

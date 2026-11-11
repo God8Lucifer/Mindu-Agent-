@@ -23,7 +23,7 @@ export const chambers = [
     'This chamber encourages visitors to imagine themselves as part of the city’s future.'
   ]}
 ];
-export const welcome = 'Kuzuzangpo la! Welcome to the Gelephu Mindfulness City Experience Centre. I’m Mindu, your AI guide. Here you can discover GMC’s vision, see its urban blueprint, explore eight economic sectors, and imagine life in the city. Ask me a question or choose a chamber to begin!';
+export const welcome = 'Kuzuzangpo la! Welcome to the Gelephu Mindfulness City Experience Centre. I’m your GMC AI guide. Here you can discover GMC’s vision, see its urban blueprint, explore eight economic sectors, and imagine life in the city. Ask me a question or choose a chamber to begin!';
 export function getChamber(id) { return chambers.find(c => c.id === String(id)) || chambers[0]; }
 // Offline responses are deliberately specific to a narrow set of known facts.
 // Questions outside those facts must not receive a generic welcome disguised as an answer.
@@ -37,7 +37,7 @@ export function demoAnswer(question, chamberId) {
     return 'The Experience Centre brief describes GMC’s vision but does not assess project risks or delivery challenges. It would be misleading for me to state specific risks as confirmed facts without an official source.';
   }
   if (/^(hi|hello|hey|kuzuzangpo)[!. ]*$/.test(q)) {
-    return 'Kuzuzangpo la! I’m Mindu. I can explain GMC’s vision, the Experience Centre, its urban blueprint and its four chambers. What would you like to know?';
+    return 'Kuzuzangpo la! I’m your GMC guide. I can explain GMC’s vision, the Experience Centre, its urban blueprint and its four chambers. What would you like to know?';
   }
   if (/chamber\s*(4|four)|my city.*future/.test(q)) return 'Chamber 4, My City, My Future, invites visitors to imagine life in Gelephu Mindfulness City and picture themselves as part of its future.';
   if (/chamber\s*(3|three)/.test(q)) return 'Chamber 3, Economy of Tomorrow, introduces GMC’s eight economic sectors and potential opportunities. The provided brief does not list all eight sector names.';
