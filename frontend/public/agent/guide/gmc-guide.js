@@ -258,8 +258,8 @@
         voiceActions.hidden = false;
       },
     });
-    // Insecure pages explain HTTPS up front; secure browsers retain recovery.
-    mic.hidden = opts.mic === false || window.isSecureContext === false;
+    // Keep the voice entry visible; unsupported capture explains how to recover.
+    mic.hidden = opts.mic === false;
     const voiceHint = root.querySelector('.mg-voice-hint');
     if (opts.mic !== false && voiceInput?.availabilityMessage) {
       voiceHint.textContent = voiceInput.availabilityMessage;

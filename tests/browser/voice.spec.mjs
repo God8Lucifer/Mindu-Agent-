@@ -279,7 +279,11 @@ test('insecure mobile connection explains voice availability while keeping typed
   const requests = await mockChat(page);
   await openGuide(page, { secure: false });
   await expect(page.locator('.mg-voice-hint')).toContainText('HTTPS');
-  await expect(page.locator('.mg-mic')).toBeHidden();
+  await page.getByRole('button', { name: 'Speak to GMC', exact: true }).click();
+  await expect(page.locator('.mg-status')).toContainText('HTTPS');
+  await expect(page.getByRole('button', { name: 'Type instead' })).toBeVisible();
+  expect(await page.evaluate(() => window.capture.recorders.length + window.capture.recognizers.length)).toBe(0);
+  expect(requests).toHaveLength(0);
   await page.getByRole('textbox', { name: 'Your question' }).fill('What is GMC?');
   await page.getByRole('button', { name: 'Send', exact: true }).click();
   await idle(page);

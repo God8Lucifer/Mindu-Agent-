@@ -4,7 +4,7 @@
 
 After merging `main` into `bug-fixes-ui`, 27 backend/lifecycle tests passed, the production build and targeted UI lint passed, and 33 browser tests passed. One native generated-audio test was skipped because this Windows WebKit runtime does not expose native recording support; its simulated capture checks passed. Native Chromium encoding passed. Physical iPhone Safari and Android Chrome recording remain unverified.
 
-The merged UI retains microphone recovery on secure browsers without capture APIs. Insecure phone pages show the HTTPS explanation up front and keep typed chat available. Both restored source links and the QR handoff animation fixes are covered by the combined browser suite.
+The UI keeps the microphone entry visible unless explicitly disabled. Insecure phone pages show the HTTPS explanation up front; tapping the microphone repeats the secure-connection requirement and offers typing recovery without starting capture. Both restored source links and the QR handoff animation fixes are covered by the combined browser suite.
 
 ## Reverification on 11 November 2026
 
