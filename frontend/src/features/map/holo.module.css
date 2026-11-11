@@ -24,6 +24,7 @@
   pointer-events: none;
 }
 .holo {
+  pointer-events: auto;
   display: flex; flex-direction: column; align-items: center; gap: 6px;
   transform-origin: 50% 100%;
   animation: emerge .7s cubic-bezier(.2, .9, .3, 1.15) both, flicker 1.1s linear both;
@@ -114,9 +115,10 @@
 .cardBody { padding-right: 26px; animation: fade .3s ease; }
 @keyframes fade { from { opacity: 0; transform: translateY(6px); } }
 .cardEyebrow { margin: 0; font-size: 10.5px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--g-yellow); }
-.cardBody h3 { margin: 6px 0 8px; font-family: var(--font-serif), serif; font-size: 21px; color: #fff; }
-.cardBody p { margin: 6px 0 10px; font-size: 13.5px; line-height: 1.55; color: #e4e5ee; }
-.cardBody ul { margin: 0; padding-left: 18px; display: grid; gap: 5px; font-size: 13px; line-height: 1.45; }
+.cardBody h3 { margin: 6px 0 8px; font-family: var(--font-serif), serif; font-size: 21px; font-weight: 800; color: #fff; }
+.cardBody p { margin: 6px 0 10px; font-size: 13.5px; line-height: 1.55; color: #f4f5fb; }
+.cardBody .cardEyebrow { font-size: 13px; font-weight: 800; line-height: 1.4; letter-spacing: .06em; color: #fffaf0; }
+.cardBody ul { margin: 0; padding-left: 18px; display: grid; gap: 5px; font-size: 13px; line-height: 1.45; color: #f4f5fb; }
 .cardBody li::marker { color: var(--g-orange); }
 .hint { font-size: 11px !important; letter-spacing: .14em; text-transform: uppercase; color: var(--g-orange) !important; }
 .keys { opacity: .75; }
@@ -126,7 +128,7 @@
 .actions button:not([class*='link']) { background: var(--g-yellow) !important; color: var(--g-navy) !important; border-color: transparent !important; }
 .actions button[class*='secondary'] { background: transparent !important; color: var(--holo-ink) !important; border-color: rgba(255, 250, 240, .5) !important; }
 .actions button[class*='link'] { color: var(--g-yellow) !important; }
-.actions [class*='hereTag'] { color: var(--g-orange); }
+.actions [class*='hereTag'] { color: var(--location-ink); }
 
 /* ---- desktop sector overlay (styled after the gmc.bt sector pop-up) ---- */
 .overlay {
@@ -170,20 +172,62 @@
 .modalClose:hover { border-color: var(--g-navy); }
 
 .phoneOnly { display: none; }
+.panelSelect { display: none; }
 
 @media (max-width: 720px) {
   .phoneOnly { display: block; }
   .desktopOnly { display: none !important; }
   .dialWrap { width: min(256px, 70vw, 34vh); }
-  .title { font-size: 19px; }
-  .eyebrow { font-size: 10px; }
+  .heading { max-width: min(220px, 55vw); padding: 4px 10px 6px; }
+  .title { font-size: 16px; line-height: 1.15; }
+  .eyebrow { font-size: 8px; letter-spacing: .18em; }
   .card {
-    top: auto; bottom: 8px; left: 8px; right: 8px; width: auto; transform: none;
-    max-height: 31vh; padding: 14px 14px 10px;
+    box-sizing: border-box;
+    top: auto; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); left: 12px; right: 12px; width: auto; transform: none;
+    max-height: min(33dvh, 330px); padding: 22px 16px 14px; border-radius: 20px;
+    overscroll-behavior: contain; scrollbar-width: thin;
     animation-name: sheetIn;
   }
-  .cardBody h3 { font-size: 18px; }
+  .card::before { content: ''; position: absolute; top: 9px; left: calc(50% - 18px); width: 36px; height: 4px; border-radius: 999px; background: rgba(255, 250, 240, .35); }
+  .close { top: 16px; right: 14px; width: 40px; height: 40px; }
+  .cardBody { padding-right: 0; }
+  .cardEyebrow { padding-right: 44px; font-size: 11px; line-height: 1.6; letter-spacing: .1em; }
+  .cardBody h3 { font-size: 18px; line-height: 1.25; }
+  .cardBody p { font-size: 13px; line-height: 1.5; margin: 8px 0 10px; }
+  .cardBody ul { font-size: 12px; line-height: 1.5; gap: 6px; }
+  .actions { margin-top: 12px; padding-top: 10px; gap: 10px; }
+  .actions button { min-height: 44px; padding: 10px 12px; font-size: 12px; letter-spacing: .02em; }
+  .actions button[class*='secondary'] { flex: 1; }
   .keys { display: none; }
+}
+@media (max-width: 380px) {
+  .actions { flex-direction: column; align-items: stretch; }
+  .actions button { width: 100%; }
+}
+@media (max-width: 720px) {
+  /* All four chambers share the approved Urban Blueprint panel layout. */
+  .chamberPanel {
+    display: block; max-height: min(35dvh, 340px); padding: 18px;
+    overflow-y: auto; touch-action: pan-y; scroll-padding: 18px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .chamberPanel::before { display: none; }
+  .chamberPanel .cardBody { overflow: visible; padding-right: 0; }
+  .chamberPanel .cardBody h3 { margin: 6px 0 10px; font-size: 18px; font-weight: 800; }
+  .chamberPanel .cardBody p { font-size: 14px; line-height: 1.6; margin: 8px 0 12px; }
+  .chamberPanel .cardBody .cardEyebrow { padding-right: 0; font-size: 12px; font-weight: 800; color: #fffaf0; }
+  .chamberPanel .cardBody ul { font-size: 13px; line-height: 1.6; }
+  .chamberPanel .actions { flex-direction: row; align-items: center; margin-top: 14px; padding-top: 12px; gap: 10px; }
+  .chamberPanel .actions button { flex: 1; width: auto; font-size: 11px; }
+  .chamberPanel .actions [class*='hereTag'] { font-size: 9px; letter-spacing: .03em; white-space: nowrap; }
+  .chamberPanel:focus-visible { outline: 2px solid rgb(240, 131, 89); outline-offset: 2px; }
+  .panelSelect { display: grid; gap: 6px; margin-top: 14px; font-size: 11px; letter-spacing: .04em; color: #e8eaf4; }
+  .panelSelect select {
+    width: 100%; min-height: 40px; padding: 8px 12px;
+    border: 1px solid rgba(255, 250, 240, .35); border-radius: 10px;
+    background: #303750; color: #fffaf0; font: 14px system-ui, sans-serif;
+  }
+  .panelSelect select:focus-visible { outline: 2px solid rgb(240, 131, 89); outline-offset: 2px; }
 }
 @keyframes sheetIn { from { opacity: 0; transform: translateY(16px); } }
 @media (hover: none) { .keys { display: none; } }

@@ -12,6 +12,9 @@
   --hairline: var(--tour-hairline);
   --hover: color-mix(in srgb, var(--tour-accent) 14%, var(--tour-card));
   --shadow: 0 10px 30px color-mix(in srgb, var(--tour-ink) 12%, transparent);
+  --location-bg: #e6f3ed;
+  --location-ink: #235c46;
+  --location-line: #9bc6b0;
   position: fixed;
   inset: 0;
   overflow: hidden;
@@ -19,6 +22,7 @@
   color: var(--ink);
   font-family: var(--font-sans), system-ui, sans-serif;
 }
+:global(:root[data-theme='dark']) .stage { --location-bg: #193c34; --location-ink: #b7ebd0; --location-line: #508673; }
 .canvas { position: absolute !important; inset: 0; touch-action: none; }
 .stage button { font: inherit; color: inherit; cursor: pointer; }
 .stage button:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
@@ -78,6 +82,9 @@
 .labelSelected { z-index: 2; }
 /* While a hologram is open, other labels step back so they don't show through it. */
 .labelsDim .label { opacity: .18; pointer-events: none; transition: opacity .3s; }
+.labelsFocused .label:not(.labelSelected) { opacity: .14; transition: opacity .3s; }
+.labelsFocused .label:not(.labelSelected) .labelText,
+.labelsFocused .label:not(.labelSelected) .here { display: none; }
 .labelInner {
   display: flex; flex-direction: column; align-items: center; gap: 3px;
   transition: transform .2s ease;
@@ -98,13 +105,13 @@
   border-radius: 4px; padding: 3px 7px; box-shadow: 0 2px 8px color-mix(in srgb, var(--tour-ink) 14%, transparent);
 }
 .labelSelected .labelText { background: var(--ink); color: var(--primary-foreground); }
-.labelCurrent .badge { animation: pulse 1.6s ease-out infinite; }
+.labelCurrent .badge { background: var(--location-bg); color: var(--location-ink); border: 1px solid var(--location-line); animation: pulse 2.8s ease-out infinite; }
 .here {
-  font-size: 9.5px; font-weight: 900; letter-spacing: .1em; text-transform: uppercase;
-  color: var(--primary-foreground); background: var(--destructive); border-radius: 4px; padding: 2px 6px;
+  font-size: 10px; font-weight: 700; letter-spacing: .01em;
+  color: var(--location-ink); background: var(--location-bg); border: 1px solid var(--location-line); border-radius: 999px; padding: 4px 9px;
 }
 @keyframes pulse {
-  0% { box-shadow: 0 0 0 2px var(--card-bg), 0 0 0 2px color-mix(in srgb, var(--destructive) 60%, transparent); }
+  0% { box-shadow: 0 0 0 2px var(--card-bg), 0 0 0 2px color-mix(in srgb, var(--location-line) 45%, transparent); }
   100% { box-shadow: 0 0 0 2px var(--card-bg), 0 0 0 16px transparent; }
 }
 
@@ -122,6 +129,7 @@
   padding: 9px 10px; min-width: 60px; color: var(--body);
 }
 .viewRail button:hover { background: var(--hover); }
+.viewRail button:disabled { cursor: default; opacity: .5; }
 .viewRail .on, .viewRail .on:hover { background: var(--ink); color: var(--primary-foreground) !important; }
 
 /* ---------- bottom-left dock ---------- */
@@ -197,7 +205,7 @@
 .cardHead h3 { margin: 0; font-size: 20px; font-weight: 900; line-height: 1.15; color: var(--ink); }
 .cardBadge { width: 40px; height: 40px; border-radius: calc(var(--radius) - 2px); display: grid; place-items: center; font-weight: 900; font-size: 17px; flex: none; }
 .cardMeta { margin: 4px 0 0; font-size: 10px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
-.cardText { margin: 10px 0 14px; font-size: 14px; line-height: 1.55; color: var(--body); }
+.cardText { margin: 10px 0 14px; font-size: 14px; line-height: 1.55; color: var(--ink); }
 .cardActions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .primary, .secondary {
   border: 1px solid transparent; border-radius: calc(var(--radius) - 2px); padding: 9px 14px;
@@ -208,7 +216,14 @@
 .secondary { background: var(--card-bg); border-color: var(--line); color: var(--ink) !important; }
 .secondary:hover { border-color: var(--gold); }
 .link { border: 0; background: none; margin-left: auto; font-weight: 700; font-size: 13px; color: var(--navy) !important; text-decoration: underline; text-underline-offset: 3px; }
-.hereTag { color: var(--destructive); font-weight: 900; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; }
+.hereTag, .locationAction {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  color: var(--location-ink); background: var(--location-bg); border: 1px solid var(--location-line);
+  border-radius: 999px; padding: 8px 11px; font-weight: 700; font-size: 11px;
+}
+.stage .locationAction { min-height: 44px; color: var(--location-ink); font-size: 13px; }
+.locationAction:hover { filter: brightness(1.06); }
+.hereTag svg, .locationAction svg { flex-shrink: 0; }
 
 .toast {
   position: absolute; top: 124px; left: 50%; transform: translateX(-50%);
@@ -218,16 +233,29 @@
 
 /* ---------- phone ---------- */
 @media (max-width: 720px) {
-  .dock { right: 16px; gap: 6px; }
+  .dock { right: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); gap: 6px; }
   .dock > * { flex: 1 1 auto; justify-content: center; }
-  .dock button { padding: 10px 8px; }
-  .header { flex-direction: column; align-items: stretch; gap: 8px; }
-  .brand { align-self: flex-start; }
-  .hints { top: auto; bottom: 84px; left: 16px; transform: none; font-size: 11px; }
+  .dock button { min-height: 48px; padding: 12px 16px; border-radius: 14px; }
+  .header { top: calc(14px + env(safe-area-inset-top, 0px)); left: 16px; right: 76px; }
+  .brand { min-width: 0; flex: 1; gap: 10px; padding: 8px; border-radius: 16px; }
+  .logoTile { width: 38px; height: 38px; }
+  .logoTile img { width: 30px; height: 30px; }
+  .brand strong { font-size: clamp(14px, 3.8vw, 17px); line-height: 1.25; }
+  .brand .eyebrow { font-size: 8px; letter-spacing: .08em; line-height: 1.4; }
+  .hints { top: auto; bottom: calc(82px + env(safe-area-inset-bottom, 0px)); left: 16px; right: 16px; justify-content: center; transform: none; font-size: 11px; white-space: normal; text-align: center; }
+  .hintMouse, .hintKeys { display: none; }
+  .hintTouch { display: inline; }
   .labelText { display: none; }
   .labelSelected .labelText, .labelCurrent .labelText { display: block; }
-  .viewRail { top: 150px; bottom: auto; flex-direction: row; }
-  .viewRail button { min-width: 48px; padding: 8px; }
-  .card { bottom: 80px; }
-  .panel { bottom: 76px; max-height: calc(100vh - 250px); }
+  .viewRail { top: calc(82px + env(safe-area-inset-top, 0px)); left: 106px; right: 16px; bottom: auto; flex-direction: row; gap: 2px; padding: 5px; border-radius: 14px; }
+  .viewRail button { flex: 1; min-width: 0; min-height: 44px; padding: 8px 4px; font-size: 10px; letter-spacing: .04em; border-radius: 10px; }
+  .card { bottom: calc(84px + env(safe-area-inset-bottom, 0px)); padding: 20px; border-radius: 20px; max-height: 44dvh; overflow-y: auto; }
+  .cardText { font-size: 15px; line-height: 1.65; }
+  .cardClose, .close { width: 40px; height: 40px; }
+  .cardHead { padding-right: 40px; }
+  .cardActions { gap: 12px; }
+  .cardActions button { min-height: 44px; font-size: 12px; }
+  .panel { bottom: calc(80px + env(safe-area-inset-bottom, 0px)); max-height: calc(100dvh - 238px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); border-radius: 20px; }
+  .stage[data-holo='true'] .dock { display: none; }
+  .toast { top: calc(148px + env(safe-area-inset-top, 0px)); }
 }

@@ -15,7 +15,7 @@ import { HoloVision } from './HoloVision';
 import { HoloAvatar } from './HoloAvatar';
 import { HoloWelcome } from './HoloWelcome';
 import { HoloSouvenir } from './HoloSouvenir';
-import { PlaceGlyph } from './PlaceGlyph';
+import { LocationIcon, PlaceGlyph } from './PlaceGlyph';
 import { HoloMasterplan, emptyPlanState, type PlanUIState } from './HoloMasterplan';
 import styles from './map.module.css';
 
@@ -113,8 +113,8 @@ export default function VenueMap() {
       // The masterplan model is wide, so it gets a little more distance.
       const wideModel = place.feature === 'masterplan';
       // Aim below the model so it sits in the upper half, clear of the bottom card.
-      const ty = wideModel ? top - (aspect >= 1 ? 2.6 : 0.6) : top * 0.5;
-      const d = (aspect >= 1 ? 1.15 : 1.25) * (wideModel ? (aspect >= 1 ? 1.0 : 1.2) : 1);
+      const ty = wideModel ? top - (aspect >= 1 ? 2.6 : 1.4) : top * 0.5;
+      const d = (aspect >= 1 ? 1.15 : 1.25) * (wideModel ? (aspect >= 1 ? 1.0 : 1.05) : 1);
       if (view === 'top') c.setLookAt(tx, 40 * d * k, hz + 0.01, tx, 0, hz, true);
       else c.setLookAt(tx + 9 * d * k, ty + 13 * d * k, hz + 20 * d * k, tx, ty, hz, true);
       return;
@@ -179,6 +179,7 @@ export default function VenueMap() {
   }, [toast]);
 
   const switchView = (mode: View) => {
+    if (holoOn) return;
     setView(mode);
     overview(mode);
   };
@@ -186,7 +187,7 @@ export default function VenueMap() {
   // ---- keyboard shortcuts (match the Devcon-style hints) --------------------
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement) {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement || e.target instanceof HTMLTextAreaElement) {
         if (e.key === 'Escape') setPanel(null);
         return;
       }
@@ -227,7 +228,7 @@ export default function VenueMap() {
   }, [query]);
 
   return (
-    <div className={styles.stage}>
+    <div className={styles.stage} data-holo={holoOn ? 'true' : 'false'}>
       <Canvas
         shadows
         flat // no tone mapping, so scene colours match the GMC tokens
@@ -246,12 +247,12 @@ export default function VenueMap() {
           planFocus={planState}
           onPickBridge={id => setPlanState({ layer: 'bridges', bridge: id, open: true })}
           showRoute={showRoute}
-          onSelect={id => select(id, true)}
+          onSelect={id => holoOn ? select(null) : select(id, true)}
         />
       </Canvas>
 
       {/* Map labels, positioned over the 3D scene by LabelProjector */}
-      <div className={`${styles.labels} ${holoOn ? styles.labelsDim : ''}`}>
+      <div className={`${styles.labels} ${selectedId ? styles.labelsFocused : ''} ${holoOn ? styles.labelsDim : ''}`}>
         {/* A place showing its hologram hides its label, which would sit under the dial. */}
         {places.filter(p => !(holoOn && p.id === selectedId)).map(p => (
           <MapLabel
@@ -289,8 +290,8 @@ export default function VenueMap() {
 
       {/* View controls */}
       <div className={styles.viewRail} role="group" aria-label="View">
-        <button type="button" className={view === '3d' ? styles.on : ''} onClick={() => switchView('3d')}>3D</button>
-        <button type="button" className={view === 'top' ? styles.on : ''} onClick={() => switchView('top')}>Top</button>
+        <button type="button" className={view === '3d' ? styles.on : ''} onClick={() => switchView('3d')} disabled={holoOn} title={holoOn ? 'Tap outside the hologram to change the map view' : '3D view'}>3D</button>
+        <button type="button" className={view === 'top' ? styles.on : ''} onClick={() => switchView('top')} disabled={holoOn} title={holoOn ? 'Tap outside the hologram to change the map view' : 'Top view'}>Top</button>
         <button type="button" className={showRoute ? styles.on : ''} onClick={() => setShowRoute(s => !s)} aria-pressed={showRoute}>Route</button>
         <button type="button" onClick={() => { setSelectedId(null); overview(); }}>Reset</button>
       </div>
@@ -350,7 +351,7 @@ export default function VenueMap() {
         <button type="button" className={panel === 'find' ? styles.dockOn : ''} onClick={() => setPanel(p => (p === 'find' ? null : 'find'))}>☰ Find</button>
       </div>
 
-      <PageNav back={backToMindu} />
+      <PageNav back={backToMindu} variant="map" />
 
       {/* Place card, or the richer Chamber 3 panel */}
       {selected && (() => {
@@ -358,8 +359,8 @@ export default function VenueMap() {
           <>
             {selected.id !== 'fire-exit' && (
               currentId === selected.id
-                ? <span className={styles.hereTag}>● You are here</span>
-                : <button type="button" className={styles.primary} onClick={() => markHere(selected.id)}>I’m here</button>
+                ? <span className={styles.hereTag}><LocationIcon /> You are here</span>
+                : <button type="button" className={styles.locationAction} onClick={() => markHere(selected.id)}><LocationIcon /> I’m here</button>
             )}
             {nextStop && nextStop !== selected.id && (
               <button type="button" className={styles.secondary} onClick={goNext}>Next chamber →</button>
@@ -443,7 +444,7 @@ function MapLabel({ place, selected, current, visited, onSelect, refCallback }: 
   onSelect: () => void; refCallback: (el: HTMLButtonElement | null) => void;
 }) {
   const kind = place.category === 'access' ? styles.badgeAccess : place.category === 'chamber' ? styles.badgeChamber : styles.badgeService;
-  const glyph = <PlaceGlyph place={place} fallback={place.id === 'ai' ? '✦' : place.id === 'postcard' ? '✉' : place.id === 'fire-exit' ? '!' : '→'} />;
+  const glyph = <PlaceGlyph place={place} fallback={place.id === 'ai' ? '✦' : place.id === 'fire-exit' ? '!' : '→'} />;
   return (
     <button
       ref={refCallback}
@@ -451,9 +452,10 @@ function MapLabel({ place, selected, current, visited, onSelect, refCallback }: 
       className={[styles.label, selected && styles.labelSelected, current && styles.labelCurrent].filter(Boolean).join(' ')}
       onClick={onSelect}
       aria-label={`${place.name}${visited ? ', visited' : ''}${current ? ', you are here' : ''}`}
+      aria-current={current ? 'location' : undefined}
     >
       <span className={styles.labelInner}>
-        <span className={`${styles.badge} ${kind}`}>{visited && place.category === 'chamber' ? '✓' : glyph}</span>
+        <span className={`${styles.badge} ${kind}`}>{current ? <LocationIcon size={18} /> : visited && place.category === 'chamber' ? '✓' : glyph}</span>
         <span className={styles.labelText}>{place.name}</span>
         {current && <span className={styles.here}>You are here</span>}
       </span>

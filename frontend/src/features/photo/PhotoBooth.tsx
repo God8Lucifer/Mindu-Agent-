@@ -268,6 +268,7 @@ function Shoot({ chamber, single, onDone, onCancel }: { chamber: Chamber; single
   const videoRef = useRef<HTMLVideoElement>(null);
   const previewRef = useRef<HTMLCanvasElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const cameraFileRef = useRef<HTMLInputElement>(null);
   const [frameId, setFrameId] = useState(loadFramePref);
   const [assets, setAssets] = useState<Assets | null>(null);
   const [facing, setFacing] = useState<'user' | 'environment'>('user');
@@ -276,6 +277,10 @@ function Shoot({ chamber, single, onDone, onCancel }: { chamber: Chamber; single
   const [pending, setPending] = useState<{ blob: Blob; url: string } | null>(null);
   const [count, setCount] = useState<number | null>(null);
   const [flash, setFlash] = useState(false);
+  const [cameraError, setCameraError] = useState('');
+  const [captureError, setCaptureError] = useState('');
+  const [processing, setProcessing] = useState(false);
+  const [cameraAttempt, setCameraAttempt] = useState(0);
   // Retaking one photo keeps its number (and frame text) from the original set.
   const shotNo = single !== undefined ? single + 1 : Math.min(kept.length + 1, SHOTS_PER_CHAMBER);
   const needed = single !== undefined ? 1 : SHOTS_PER_CHAMBER;
@@ -286,21 +291,33 @@ function Shoot({ chamber, single, onDone, onCancel }: { chamber: Chamber; single
     let cancelled = false;
     (async () => {
       try {
-        if (!navigator.mediaDevices?.getUserMedia) throw new Error('No camera API');
+        if (!window.isSecureContext) throw new Error('For a live preview, open this site over HTTPS. You can still take a photo using your phone camera below.');
+        if (!navigator.mediaDevices?.getUserMedia) throw new Error('Live camera preview is unavailable in this browser. Take a photo or choose one below.');
         stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: facing, width: { ideal: 1920 }, height: { ideal: 1920 } },
           audio: false,
         });
         if (cancelled) { stream.getTracks().forEach(t => t.stop()); return; }
         const v = videoRef.current;
-        if (v) { v.srcObject = stream; await v.play().catch(() => {}); }
+        if (!v) return;
+        v.srcObject = stream;
+        await v.play();
+        if (cancelled) return;
         setCamState('on');
-      } catch {
-        if (!cancelled) setCamState('error');
+      } catch (error) {
+        stream?.getTracks().forEach(t => t.stop());
+        if (!cancelled) {
+          setCamState('error');
+          setCameraError(error instanceof Error && error.name === 'NotAllowedError'
+            ? 'Camera access was denied. Allow it in your browser and retry, or take a photo below.'
+            : error instanceof Error && error.name === 'NotReadableError'
+              ? 'Your camera is busy. Close other camera apps and retry, or choose a photo below.'
+              : error instanceof Error ? error.message : 'We couldn’t open the camera. Take a photo or choose one below.');
+        }
       }
     })();
     return () => { cancelled = true; stream?.getTracks().forEach(t => t.stop()); };
-  }, [facing]);
+  }, [facing, cameraAttempt]);
 
   useEffect(() => { prepareFrames().then(setAssets); }, []);
 
@@ -324,7 +341,7 @@ function Shoot({ chamber, single, onDone, onCancel }: { chamber: Chamber; single
       const live = camState === 'on' && v && v.videoWidth;
       renderFramed(ctx, c.width, c.height, frame, info, assets,
         live ? { src: v, w: v.videoWidth, h: v.videoHeight, mirror: facing === 'user' } : null);
-      if (live) raf = requestAnimationFrame(tick);
+      if (camState === 'on') raf = requestAnimationFrame(tick);
     };
     tick();
     return () => cancelAnimationFrame(raf);
@@ -344,10 +361,14 @@ function Shoot({ chamber, single, onDone, onCancel }: { chamber: Chamber; single
 
   const snap = useCallback(async () => {
     const v = videoRef.current;
-    if (!v || !v.videoWidth) return;
+    if (!v || !v.videoWidth) { setCaptureError('The camera is not ready yet. Please try again.'); return; }
+    setCaptureError('');
+    setProcessing(true);
     setFlash(true);
     setTimeout(() => setFlash(false), 250);
-    await render(v, v.videoWidth, v.videoHeight, facing === 'user');
+    try { await render(v, v.videoWidth, v.videoHeight, facing === 'user'); }
+    catch { setCaptureError('We couldn’t prepare this photo. Please try again.'); }
+    finally { setProcessing(false); }
   }, [facing, render]);
 
   // 3-2-1 countdown, then take the photo
@@ -361,12 +382,17 @@ function Shoot({ chamber, single, onDone, onCancel }: { chamber: Chamber; single
 
   const onFile = async (file: File | undefined) => {
     if (!file) return;
+    setCaptureError('');
+    setProcessing(true);
     const url = URL.createObjectURL(file);
     try {
       const img = await loadImage(url);
       await render(img, img.naturalWidth, img.naturalHeight, false);
+    } catch {
+      setCaptureError('This image could not be opened. Try a JPEG or PNG photo.');
     } finally {
       URL.revokeObjectURL(url);
+      setProcessing(false);
     }
   };
 
@@ -399,14 +425,25 @@ function Shoot({ chamber, single, onDone, onCancel }: { chamber: Chamber; single
         {pending && <img src={pending.url} alt="Your photo" className={styles.review} />}
         {count !== null && count > 0 && <span key={count} className={styles.count}>{count}</span>}
         {flash && <span className={styles.flash} />}
-        {camState === 'starting' && !pending && <p className={styles.camMsg}>Starting camera…</p>}
-        {camState === 'error' && !pending && (
+        {camState === 'starting' && !pending && (
           <div className={styles.camMsg}>
-            <p>We couldn’t open the camera. Allow camera access in your browser, or pick a photo instead.</p>
+            <p>Waiting for camera access. Allow the camera in your browser, or take a photo below.</p>
+            <button type="button" className={styles.primaryBtn} onClick={() => cameraFileRef.current?.click()}>Take a photo</button>
             <button type="button" className={styles.primaryBtn} onClick={() => fileRef.current?.click()}>Choose a photo</button>
           </div>
         )}
+        {camState === 'error' && !pending && (
+          <div className={styles.camMsg}>
+            <p>{cameraError}</p>
+            <button type="button" className={styles.primaryBtn} onClick={() => cameraFileRef.current?.click()}>Take a photo</button>
+            <button type="button" className={styles.primaryBtn} onClick={() => fileRef.current?.click()}>Choose a photo</button>
+            <button type="button" className={styles.ghostBtnDark} onClick={() => { setCamState('starting'); setCameraAttempt(n => n + 1); }}>Retry live camera</button>
+          </div>
+        )}
       </div>
+
+      {captureError && <p className={styles.note} role="alert">{captureError}</p>}
+      {processing && <p className={styles.note} role="status">Preparing photo…</p>}
 
       <FramePicker
         assets={assets}
@@ -436,8 +473,8 @@ function Shoot({ chamber, single, onDone, onCancel }: { chamber: Chamber; single
             <button
               type="button"
               className={styles.shutter}
-              onClick={() => setCount(3)}
-              disabled={camState !== 'on' || count !== null}
+              onClick={() => camState === 'on' ? setCount(3) : cameraFileRef.current?.click()}
+              disabled={camState === 'starting' || count !== null || processing}
               aria-label="Take photo"
             />
             <span className={styles.ctrlSpacer} />
@@ -445,6 +482,15 @@ function Shoot({ chamber, single, onDone, onCancel }: { chamber: Chamber; single
         )}
       </div>
 
+      <input
+        ref={cameraFileRef}
+        type="file"
+        accept="image/*"
+        capture={facing}
+        aria-label="Take a photo with your device camera"
+        hidden
+        onChange={e => { onFile(e.target.files?.[0]); e.target.value = ''; }}
+      />
       <input
         ref={fileRef}
         type="file"

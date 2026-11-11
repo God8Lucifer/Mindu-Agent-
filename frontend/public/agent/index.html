@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content" />
   <title>GMC Guide</title>
   <script>
     // Light / dark theme: the visitor's choice (saved), otherwise the device setting.
@@ -106,7 +106,7 @@
       return window.guide;
     }
 
-    // Kiosk flow: logo splash → QR / continue as guest → chat.
+    // Kiosk flow: scan QR → paired phone → shared GMC chat experience.
     MinduKiosk.start({
       intro: document.getElementById('intro'),
       guide: document.getElementById('guide'),

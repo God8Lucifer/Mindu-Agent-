@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { ChamberPanel } from './ChamberPanel';
 import Image from 'next/image';
 import { sectors } from './sectors';
 import { SectorIcon } from './SectorIcon';
@@ -41,7 +42,7 @@ function wedge(i: number) {
  * centred overlay on desktop, or in the bottom card on phones.
  * Colours: the GMC logo palette (see holo.module.css); icons keep their own colours.
  */
-export function HoloSectors({ eyebrow, title, intro, anchorRef, onClose, actions }: Props) {
+export function HoloSectors({ eyebrow, title, intro, anchorRef, actions }: Props) {
   const [activeIdx, setActiveIdx] = useState<number | null>(null);
   const [rotation, setRotation] = useState(0);
   const active = activeIdx === null ? null : sectors[activeIdx];
@@ -135,8 +136,7 @@ export function HoloSectors({ eyebrow, title, intro, anchorRef, onClose, actions
         </div>
       </div>
 
-      <aside className={styles.card} aria-live="polite">
-        <button type="button" className={styles.close} onClick={onClose} aria-label="Close hologram">×</button>
+      <ChamberPanel title={title} resetKey={active?.id}>
         {active && (
           <div key={active.id} className={`${styles.cardBody} ${styles.phoneOnly}`}>
             <p className={styles.cardEyebrow}>{active.tagline}</p>
@@ -151,7 +151,7 @@ export function HoloSectors({ eyebrow, title, intro, anchorRef, onClose, actions
           <p className={styles.hint}>Tap a sector on the dial{' '}<span className={styles.keys}>or use ← →</span></p>
         </div>
         <footer className={styles.actions}>{actions}</footer>
-      </aside>
+      </ChamberPanel>
 
       {/* Desktop: sector details as a centred overlay, like the sector ring on gmc.bt. */}
       {active && (

@@ -76,18 +76,19 @@
     const history = []; // { role: 'user' | 'assistant', content }
 
     root.classList.add('mg');
+    root.dataset.conversation = 'intro';
     root.innerHTML = `
       <div class="mg-stage" data-state="wake">
         <span class="mg-ring"></span><span class="mg-ring"></span><span class="mg-ring"></span>
         ${logoSvg()}
       </div>
-      <p class="mg-name">GMC <span>· your guide</span></p>
+      <p class="mg-name">GMC</p>
       <p class="mg-status" aria-live="polite"></p>
       <div class="mg-voice-actions" hidden>
         <button type="button" class="mg-retry">Try microphone again</button>
         <button type="button" class="mg-type">Type instead</button>
       </div>
-      <div class="mg-log" role="log" aria-live="polite"></div>
+      <div class="mg-log" role="log" aria-label="Conversation" aria-live="polite" tabindex="0"></div>
       <div class="mg-chips"></div>
       <form class="mg-input">
         <button type="button" class="mg-mic" aria-label="Speak to GMC" hidden>
@@ -112,6 +113,20 @@
     const LABELS = { wake: 'Waking up…', idle: 'Ask me anything', listening: 'Listening… Tap the microphone to finish.', transcribing: 'Transcribing…', requesting: 'Opening microphone…', thinking: 'Preparing a reply…', speaking: 'Speaking…' };
     let state = 'wake';
     let busy = false;
+    let replyCount = 0;
+    let followLatest = true;
+
+    function fitConversation() {
+      root.dataset.conversation = replyCount >= 4 ? 'long' : replyCount >= 2 ? 'conversation' : replyCount ? 'reply' : 'intro';
+    }
+
+    function scrollLatest() {
+      if (followLatest) log.scrollTop = log.scrollHeight;
+    }
+    log.addEventListener('scroll', () => {
+      followLatest = log.scrollHeight - log.scrollTop - log.clientHeight < 48;
+    }, { passive: true });
+    stage.addEventListener('transitionend', scrollLatest);
 
     function setState(next) {
       state = next;
@@ -133,16 +148,16 @@
       el.className = `mg-msg mg-${who}`;
       el.textContent = text;
       log.appendChild(el);
-      log.scrollTop = log.scrollHeight;
+      scrollLatest();
       return el;
     }
 
     async function typeOut(el, text) {
-      if (reduceMotion) { el.textContent = text; return; }
+      if (reduceMotion) { el.textContent = text; scrollLatest(); return; }
       el.textContent = '';
       for (const word of text.split(' ')) {
         el.textContent += (el.textContent ? ' ' : '') + word;
-        log.scrollTop = log.scrollHeight;
+        scrollLatest();
         await wait(70);
       }
     }
@@ -173,13 +188,14 @@
         box.appendChild(a);
       });
       el.after(box);
-      log.scrollTop = log.scrollHeight;
+      scrollLatest();
     }
 
     async function ask(question) {
       question = question.trim();
       if (!question || busy || voiceInput?.active) return;
       busy = true;
+      followLatest = true;
       clearTimeout(typingTimer);
       voiceActions.hidden = true;
       updateControls();
@@ -196,6 +212,8 @@
         reply = err && err.userMessage ? err.userMessage : "Sorry, I couldn't reach my answers just now. Please try again.";
       }
       const text = typeof reply === 'string' ? reply : (reply && reply.text) || '';
+      replyCount += 1;
+      fitConversation();
       if (ok) history.push({ role: 'user', content: question }, { role: 'assistant', content: text });
       setState('speaking');
       const el = addMessage('bot', '');
@@ -287,7 +305,9 @@
       if (!m || typeof m.content !== 'string' || (m.role !== 'user' && m.role !== 'assistant')) return;
       addMessage(m.role === 'user' ? 'user' : 'bot', m.content);
       history.push({ role: m.role, content: m.content });
+      if (m.role === 'assistant') replyCount += 1;
     });
+    fitConversation();
     if (history.length) { greeted = true; chips.hidden = true; }
 
     async function greet() {

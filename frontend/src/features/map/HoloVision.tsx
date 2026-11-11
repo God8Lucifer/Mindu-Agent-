@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { ChamberPanel } from './ChamberPanel';
 import { visionChapters, type VisionChapter } from './vision';
 import { screenImageURL } from './textures';
 import holo from './holo.module.css';
@@ -26,7 +27,7 @@ const HOLD_MS = 1100;
  * band opens around it with four chapters to explore. The lamp has to be lit
  * again each time the hologram is opened.
  */
-export function HoloVision({ eyebrow, title, intro, onLitChange, anchorRef, onClose, actions }: Props) {
+export function HoloVision({ eyebrow, title, intro, onLitChange, anchorRef, actions }: Props) {
   // The lamp starts unlit every time the hologram opens, and goes out when it closes.
   const [lit, setLit] = useState(false);
   const litChange = useRef(onLitChange);
@@ -206,8 +207,7 @@ export function HoloVision({ eyebrow, title, intro, onLitChange, anchorRef, onCl
         </div>
       </div>
 
-      <aside className={holo.card} aria-live="polite">
-        <button type="button" className={holo.close} onClick={onClose} aria-label="Close hologram">×</button>
+      <ChamberPanel title={title} resetKey={active?.id}>
         {active && (
           <div key={active.id} className={`${holo.cardBody} ${holo.phoneOnly}`}>
             <p className={holo.cardEyebrow}>{active.tagline}</p>
@@ -223,7 +223,7 @@ export function HoloVision({ eyebrow, title, intro, onLitChange, anchorRef, onCl
           </p>
         </div>
         <footer className={holo.actions}>{actions}</footer>
-      </aside>
+      </ChamberPanel>
 
       {active && (
         <div className={`${holo.overlay} ${holo.desktopOnly}`} onClick={() => openChapter(null)}>

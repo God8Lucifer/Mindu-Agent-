@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, type ReactNode } from 'react';
+import { ChamberPanel } from './ChamberPanel';
 import { planBridges, planLayers, type PlanLayerId } from './masterplan';
 import holo from './holo.module.css';
 import styles from './masterplan.module.css';
@@ -30,7 +31,7 @@ interface Props {
  * five layer chips in the bottom card, and details in an overlay (desktop)
  * or the card itself (phone). The model lives in the 3D scene (MasterplanHolo).
  */
-export function HoloMasterplan({ eyebrow, title, intro, anchorRef, state, onChange, onClose, actions }: Props) {
+export function HoloMasterplan({ eyebrow, title, intro, anchorRef, state, onChange, actions }: Props) {
   const layer = planLayers.find(l => l.id === state.layer) ?? null;
   const bridge = planBridges.find(b => b.id === state.bridge) ?? null;
   const detail = state.open ? (bridge ? { kind: 'bridge' as const, bridge } : layer ? { kind: 'layer' as const, layer } : null) : null;
@@ -81,8 +82,7 @@ export function HoloMasterplan({ eyebrow, title, intro, anchorRef, state, onChan
         </div>
       </div>
 
-      <aside className={holo.card} aria-live="polite">
-        <button type="button" className={holo.close} onClick={onClose} aria-label="Close hologram">×</button>
+      <ChamberPanel title={title} resetKey={`${state.layer}:${state.bridge}:${state.open}`}>
         {detailBody && (
           <div key={detailBody.title} className={`${holo.cardBody} ${holo.phoneOnly}`}>
             <p className={holo.cardEyebrow}>{detailBody.eyebrow}</p>
@@ -109,9 +109,16 @@ export function HoloMasterplan({ eyebrow, title, intro, anchorRef, state, onChan
             </button>
           ))}
         </div>
+        <label className={holo.panelSelect}>
+          Explore the model
+          <select value={state.layer ?? ''} onChange={event => event.target.value ? pickLayer(event.target.value as PlanLayerId) : onChange(emptyPlanState)}>
+            <option value="">All layers</option>
+            {planLayers.map(layer => <option key={layer.id} value={layer.id}>{layer.title}</option>)}
+          </select>
+        </label>
         <p className={styles.note}>Stylised from the published masterplan by BIG with Arup and Cistri.</p>
         <footer className={holo.actions}>{actions}</footer>
-      </aside>
+      </ChamberPanel>
 
       {detailBody && (
         <div className={`${holo.overlay} ${holo.desktopOnly}`} onClick={closeDetail}>

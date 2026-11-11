@@ -1,5 +1,15 @@
 import type { Place } from './layout-data';
 
+/** A calm location marker for the visitor's current stop. */
+export function LocationIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M19 10c0 5-7 11-7 11S5 15 5 10a7 7 0 1 1 14 0Z" />
+      <circle cx="12" cy="10" r="2.5" />
+    </svg>
+  );
+}
+
 /** Small shopping-bag icon used for the Souvenir Shop's badge. */
 export function BagIcon({ size = '62%' }: { size?: number | string }) {
   return (

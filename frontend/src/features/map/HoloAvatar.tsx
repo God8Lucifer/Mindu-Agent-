@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, type ReactNode } from 'react';
+import { ChamberPanel } from './ChamberPanel';
 import { PERSONA_MS, personas, type PersonaId } from './avatar';
 import { AvatarFigure } from './AvatarFigure';
 import holo from './holo.module.css';
@@ -21,7 +22,7 @@ interface Props {
  * student, builder, monk, resident, professional — until the visitor picks
  * the one that is them.
  */
-export function HoloAvatar({ eyebrow, title, intro, anchorRef, onClose, actions }: Props) {
+export function HoloAvatar({ eyebrow, title, intro, anchorRef, actions }: Props) {
   const [index, setIndex] = useState(0);
   const [chosen, setChosen] = useState<PersonaId | null>(null);
 
@@ -69,8 +70,7 @@ export function HoloAvatar({ eyebrow, title, intro, anchorRef, onClose, actions 
         </div>
       </div>
 
-      <aside className={holo.card} aria-live="polite">
-        <button type="button" className={holo.close} onClick={onClose} aria-label="Close hologram">×</button>
+      <ChamberPanel title={title} resetKey={chosen ?? 'intro'}>
         {chosen ? (
           <div key={chosen} className={holo.cardBody}>
             <p className={holo.cardEyebrow}>Your future in GMC</p>
@@ -100,8 +100,15 @@ export function HoloAvatar({ eyebrow, title, intro, anchorRef, onClose, actions 
             <button type="button" className={styles.shuffle} onClick={() => setChosen(null)}>↻ Shuffle again</button>
           )}
         </div>
+        <label className={holo.panelSelect}>
+          Choose your avatar
+          <select value={chosen ?? ''} onChange={event => event.target.value ? choose(event.target.value as PersonaId) : setChosen(null)}>
+            <option value="">Shuffle avatars</option>
+            {personas.map(persona => <option key={persona.id} value={persona.id}>{persona.title}</option>)}
+          </select>
+        </label>
         <footer className={holo.actions}>{actions}</footer>
-      </aside>
+      </ChamberPanel>
     </>
   );
 }

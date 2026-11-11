@@ -1,10 +1,12 @@
-/* Kiosk intro: splash → welcome (QR / guest) → chat. Uses the guide's colour tokens (.mg). */
+/* Kiosk intro: QR → paired phone → animated welcome → chat. Uses the guide's colour tokens (.mg). */
 .ks {
   position: fixed;
   inset: 0;
   z-index: 10;
   max-width: none;
   justify-content: center;
+  justify-content: safe center;
+  overflow-y: auto;
   gap: 0;
   padding: 24px 16px;
   box-sizing: border-box;
@@ -12,18 +14,27 @@
 }
 .ks[hidden] { display: none; }
 
-/* ---- hero: the logo ---- */
-.ks-hero { display: flex; flex-direction: column; align-items: center; }
+/* ---- animated logos on the QR screen and chat entrance ---- */
+.ks-hero { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; max-width: 100%; }
+.ks .ks-welcome-logo {
+  width: min(28vmin, 200px);
+  height: min(28vmin, 200px);
+  transition: width 0.9s var(--ks-ease), height 0.9s var(--ks-ease);
+}
+.ks[data-step='returning'] .ks-welcome-logo { width: min(58vmin, 440px); height: min(58vmin, 440px); }
+.ks[data-step='returning'] .ks-title { font-size: 36px; }
+.ks[data-step='returning'] .ks-title span { opacity: 0; }
+.ks .ks-welcome-logo .mg-logo { width: 80%; height: 80%; }
 .ks .ks-stage {
   width: min(58vmin, 440px);
   height: min(58vmin, 440px);
-  transition: width 0.9s var(--ks-ease), height 0.9s var(--ks-ease);
 }
 .ks .ks-stage .mg-logo { width: 80%; height: 80%; }
 .ks .ks-stage .mg-ring { inset: 4%; }
-.ks:not([data-step='splash']) .ks-stage { width: min(30vmin, 200px); height: min(30vmin, 200px); }
 
 .ks-title {
+  max-width: min(540px, 100%);
+  text-align: center;
   margin: 18px 0 0;
   display: flex;
   flex-direction: column;
@@ -32,15 +43,14 @@
   font-size: 30px;
   font-weight: 600;
   letter-spacing: 0.02em;
-  opacity: 0;
-  animation: ks-fade 0.8s ease-out 1.8s both;
   transition: opacity 0.4s, font-size 0.9s var(--ks-ease), margin 0.9s var(--ks-ease);
 }
-.ks-title span { font-size: 15px; font-weight: 400; color: var(--mg-muted); letter-spacing: 0; }
-.ks:not([data-step='splash']) .ks-title { font-size: 22px; margin-top: 8px; }
+.ks-title span { font-size: 15px; font-weight: 400; color: var(--mg-muted); letter-spacing: 0; transition: opacity 0.5s; }
+.ks-enter-title { animation: ks-fade 0.8s ease-out 0.35s both; }
 
-/* ---- welcome: QR + guest ---- */
+/* ---- welcome: QR ---- */
 .ks-welcome {
+  flex-shrink: 0;
   display: grid;
   grid-template-rows: 0fr;
   opacity: 0;
@@ -55,12 +65,13 @@
   min-height: 0;
 }
 .ks[data-step='welcome'] .ks-welcome,
-.ks[data-step='leaving'] .ks-welcome,
 .ks[data-step='handoff'] .ks-welcome { grid-template-rows: 1fr; }
 .ks[data-step='welcome'] .ks-welcome { opacity: 1; transition-delay: 0s, 0.35s; }
 .ks[data-step='handoff'] .ks-welcome { opacity: 1; }
 
 .ks-qr {
+  display: block;
+  box-sizing: border-box;
   margin-top: 28px;
   width: 168px;
   height: 168px;
@@ -74,19 +85,9 @@
 }
 .ks-qr:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(20, 24, 50, 0.18); }
 .ks-qr svg { display: block; width: 100%; height: 100%; }
-.ks-qr-pulse { animation: ks-pulse 1s ease-out; box-shadow: 0 0 0 4px var(--mg-hot); }
-.ks-qr-label { margin: 6px 0 0; font-size: 16px; font-weight: 600; }
-.ks-qr-hint { margin: 0; font-size: 12px; color: var(--mg-muted); }
-.ks-or {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 220px;
-  margin: 8px 0 2px;
-  color: var(--mg-muted);
-  font-size: 13px;
-}
-.ks-or::before, .ks-or::after { content: ''; flex: 1; height: 1px; background: var(--mg-border); }
+.ks-qr-label { margin: 6px 0 0; font-size: 16px; font-weight: 600; text-align: center; }
+.ks-qr-hint { margin: 0; font-size: 12px; color: var(--mg-muted); max-width: 320px; text-align: center; }
+.ks-qr-hint:empty { display: none; }
 .ks-guest {
   font: inherit;
   font-size: 15px;
@@ -102,18 +103,18 @@
 }
 .ks-guest:hover { transform: translateY(-1px); filter: brightness(1.05); }
 
-/* leaving for the chat: everything but the logo fades */
-.ks[data-step='leaving'] .ks-title,
-.ks[data-step='leaving'] .ks-welcome,
-.ks[data-step='handoff'] .ks-title,
-.ks[data-step='handoff'] .ks-qr-hint,
-.ks[data-step='handoff'] .ks-or,
-.ks[data-step='handoff'] .ks-guest { opacity: 0; transition: opacity 0.35s; pointer-events: none; }
-/* drop the title's fade-in (fill-mode keeps it at opacity 1) so it can fade out */
-.ks[data-step='leaving'] .ks-title,
-.ks[data-step='handoff'] .ks-title { animation: none; }
+/* Keep the animated logo visible while it moves into the chat. */
+.ks[data-step='leaving'] .ks-title { opacity: 0; pointer-events: none; animation: none; }
 
-/* ---- sent to phone ---- */
+/* QR handoff: the logo moves into the code, then the kiosk resets. */
+.ks[data-step='handoff'] .ks-title,
+.ks[data-step='handoff'] .ks-qr-hint { opacity: 0; transition: opacity 0.35s; pointer-events: none; }
+.ks-qr-pulse { animation: ks-pulse 1s ease-out; box-shadow: 0 0 0 4px var(--mg-hot); }
+.ks[data-step='handoff'] .ks-qr {
+  outline: 4px solid var(--mg-hot);
+  outline-offset: 4px;
+  box-shadow: 0 0 24px color-mix(in srgb, var(--mg-hot) 35%, transparent);
+}
 .ks-done { display: none; flex-direction: column; align-items: center; text-align: center; gap: 6px; }
 .ks[data-step='sent'] .ks-hero,
 .ks[data-step='sent'] .ks-welcome { display: none; }
@@ -132,6 +133,49 @@
 .ks-check path { stroke-dasharray: 24; stroke-dashoffset: 24; animation: ks-tick 0.5s ease-out 0.35s forwards; }
 .ks-done-title { margin: 0; font-size: 24px; font-weight: 600; }
 .ks-done-sub { margin: 0; font-size: 15px; color: var(--mg-muted); }
+
+/* Phone: wait in the orange QR frame, then receive the kiosk's logo. */
+.ks-phone-box { position: relative; width: 220px; height: 220px; margin-bottom: 16px; }
+.ks-phone-box::after {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  border: 3px solid var(--mg-hot);
+  border-radius: 30px;
+  animation: ks-pair-glow 1.6s ease-in-out infinite alternate;
+  transition: opacity 0.4s;
+  pointer-events: none;
+}
+.ks-phone-code {
+  position: absolute;
+  inset: 12px;
+  padding: 10px;
+  border-radius: 20px;
+  background: #fff;
+  outline: 4px solid var(--mg-hot);
+  box-shadow: 0 0 28px color-mix(in srgb, var(--mg-hot) 25%, transparent);
+  transition: opacity 0.45s, transform 0.65s var(--ks-ease);
+}
+.ks-phone-code svg { display: block; width: 100%; height: 100%; }
+.ks .ks-phone-logo {
+  position: absolute;
+  inset: 10px;
+  width: 200px;
+  height: 200px;
+  opacity: 0;
+  transform: scale(0.12);
+  transition: opacity 0.55s, transform 0.95s cubic-bezier(0.2, 1.2, 0.3, 1);
+}
+.ks[data-step='paired'] .ks-phone-logo,
+.ks[data-step='leaving'] .ks-phone-logo { opacity: 1; transform: scale(1); }
+.ks[data-step='paired'] .ks-phone-code,
+.ks[data-step='leaving'] .ks-phone-code { opacity: 0; transform: scale(0.6); }
+.ks[data-step='paired'] .ks-phone-box::after,
+.ks[data-step='leaving'] .ks-phone-box::after { opacity: 0; }
+.ks-phone-box ~ .ks-title { max-width: 320px; text-align: center; }
+.ks-pair-actions { display: flex; gap: 10px; margin-top: 24px; }
+.ks-pair-actions[hidden] { display: none; }
+.ks[data-step='pair-error'] .ks-phone-box::after { animation: none; }
 
 /* ---- chat entrance ---- */
 #guide.ks-enter > :not(.mg-stage) { opacity: 0; }
@@ -184,9 +228,10 @@
 
 @keyframes ks-fade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 @keyframes ks-rise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
-@keyframes ks-pulse { 0% { transform: scale(1); } 40% { transform: scale(1.06); } 100% { transform: scale(1); } }
+@keyframes ks-pulse { 0%, 100% { transform: scale(1); } 40% { transform: scale(1.06); } }
 @keyframes ks-pop { from { transform: scale(0.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 @keyframes ks-tick { to { stroke-dashoffset: 0; } }
+@keyframes ks-pair-glow { from { opacity: 0.3; transform: scale(0.97); } to { opacity: 1; transform: scale(1.02); } }
 
 @media (prefers-reduced-motion: reduce) {
   .ks *, #guide.ks-in > * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
@@ -259,3 +304,8 @@
 .ks-veil-dark { background: #12172a; box-shadow: inset 0 0 0 1px #343c5c; }
 .ks-veil-dark .ks-veil-inner { color: #e9e4d8; }
 .ks-veil-dark .ks-veil-inner svg { color: #e8874a; }
+
+@media (max-width: 600px) {
+  .ks-side { flex-direction: row; align-items: center; top: 14px; right: 12px; gap: 6px; }
+  .ks-map { width: 36px; height: 36px; }
+}
