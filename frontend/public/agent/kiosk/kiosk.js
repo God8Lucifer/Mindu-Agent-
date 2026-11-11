@@ -72,6 +72,7 @@
 
     async function showIntro() {
       busy = true;
+      currentGuide?.destroy?.();
       currentGuide = null;
       clearChat();
       if ('speechSynthesis' in window) speechSynthesis.cancel();

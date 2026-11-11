@@ -26,8 +26,8 @@
   <div class="ks-side">
     <button type="button" class="ks-map" aria-label="Open the Experience Centre map" title="Experience Centre map" hidden></button>
     <button type="button" class="ks-map" aria-label="Open the photo collection camera" title="Photo collection" hidden></button>
-    <a href="/briefing">Build my briefing</a>
   </div>
+  <script src="/agent/guide/gmc-voice.js"></script>
   <script src="/agent/guide/gmc-guide.js"></script>
   <script src="/agent/kiosk/kiosk.js"></script>
   <script>
@@ -50,8 +50,9 @@
           });
           return { text: data.answer, sources: data.sources };
         },
-        transcribe: async (blob) => {
+        transcribe: async (blob, { signal } = {}) => {
           const data = await api('/api/transcribe', {
+            signal,
             method: 'POST',
             headers: { 'Content-Type': blob.type.split(';')[0] || 'audio/webm' },
             body: blob,

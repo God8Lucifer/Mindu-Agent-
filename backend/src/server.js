@@ -58,7 +58,7 @@ async function handler(req, res) {
     try {
       for await (const chunk of req) {
         body += chunk;
-        if (Buffer.byteLength(body) > 5000) return send(res, 413, { error: 'Request too large' });
+        if (Buffer.byteLength(body) > 64 * 1024) return send(res, 413, { error: 'Request too large' });
       }
       const input = JSON.parse(body);
       if (!input || typeof input !== 'object' || Array.isArray(input)) return send(res, 400, { error: 'Expected a JSON object.' });

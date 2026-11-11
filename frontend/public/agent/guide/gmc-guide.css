@@ -196,3 +196,10 @@
 }
 .mg-sources a:hover { border-color: var(--mg-hot); color: var(--mg-text); }
 .mg-mode { margin: 0; font-size: 12px; color: var(--mg-muted); text-align: center; }
+
+/* Keep voice recovery available without relying on a second permission prompt. */
+.mg-voice-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.mg-voice-actions[hidden] { display: none; }
+.mg-voice-actions button { min-height: 44px; padding: 8px 12px; border: 1px solid currentColor; border-radius: 12px; background: transparent; color: inherit; cursor: pointer; }
+.mg-input button:disabled { opacity: 0.5; cursor: wait; }
+[data-state='transcribing'] .mg-logo { animation: mg-tilt 2.8s ease-in-out infinite; }

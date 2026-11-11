@@ -45,3 +45,14 @@ test('reports quota failures instead of returning a fake transcript', async () =
     else process.env.OPENAI_API_KEY = key;
   }
 });
+
+test('empty speech is reported as NO_SPEECH and MP4 uses the correct upload extension', async () => {
+  const key = process.env.OPENAI_API_KEY, originalFetch = global.fetch;
+  process.env.OPENAI_API_KEY = 'test-key';
+  global.fetch = async (_, init) => {
+    assert.equal(init.body.get('file').name, 'question.mp4');
+    return { ok: true, json: async () => ({ text: '   ' }) };
+  };
+  try { await assert.rejects(transcribeAudio(Buffer.alloc(2000), 'audio/mp4'), e => e.code === 'NO_SPEECH'); }
+  finally { global.fetch = originalFetch; if (key === undefined) delete process.env.OPENAI_API_KEY; else process.env.OPENAI_API_KEY = key; }
+});
