@@ -8,11 +8,11 @@ The backend rejects clearly unrelated requests with a concise GMC invitation. Am
 
 ## Automated checks
 
-- `npm test`: 23 unit/lifecycle tests, including history/context/source preservation, unrelated questions, unavailable GMC information, MP4 transcription extension, empty speech, duplicate capture events, an old timer overlapping a new recording, late permission resolution, silence detection, automatic stop after speech, stalled-upload recovery, and full bounded multibyte conversation payloads.
+- `npm test`: 25 unit/lifecycle tests, including history/context/source preservation, unrelated questions, unavailable GMC information, MP4 transcription extension, empty speech, duplicate capture events, an old timer overlapping a new recording, late permission resolution, silence detection, automatic stop after speech, stalled-upload recovery, and full bounded multibyte conversation payloads.
 - `npm run build`: production compilation, type checking and prerendering.
-- `npm run test:browser`: 12 UI tests, six each in Chromium with Pixel 7 settings and WebKit with iPhone 13 settings. Requires Playwright's Chromium and WebKit downloads (`npx playwright install chromium webkit`). These tests use simulated recognition/recorder/permission events and mocked upstream transcription/AI responses. They exercise the actual page adapter, chat UI and backend reply logic without using a private API key.
+- `npm run test:browser`: 20 UI tests, ten each in Chromium with Pixel 7 settings and WebKit with iPhone 13 settings. Requires Playwright's Chromium and WebKit downloads (`npx playwright install chromium webkit`). Most tests use simulated recognition/permission events and mocked upstream transcription/AI responses. Two tests use the browser’s native MediaRecorder with a generated Web Audio stream; they verify real encoding without physical microphone hardware. They exercise the actual page adapter, chat UI and backend reply logic without using a private API key.
 
-The browser checks cover the same question typed and spoken ("What is GMC?"), a spoken "Why?", a spoken unrelated question ("Tell me a joke."), visible transcripts and source links, supported WebM/MP4 selection, one upload and chat per recording, disabled duplicate sends, permission denial, empty recordings, transcription failure, typing recovery, and a runtime recognition failure switching to recorded transcription on retry, plus capture cancellation and reuse after page hide. Integration checks also preserve the upstream GMC branding, theme toggle and explicit microphone opt-out.
+The browser checks cover the same question typed and spoken ("What is GMC?"), spoken "Why?" and "Tell me more." follow-ups, a spoken unrelated question ("Tell me a joke."), visible transcripts and source links, supported WebM/MP4 selection, one upload and chat per recording, disabled duplicate sends, permission denial, empty recordings, transcription failure, typing recovery, and a runtime recognition failure switching to recorded transcription on retry, plus capture cancellation and reuse after page hide. Integration checks also preserve the upstream GMC branding, theme toggle and explicit microphone opt-out.
 
 ## Physical device checks still required
 
@@ -28,3 +28,18 @@ Use the HTTPS deployment on current iPhone Safari and Android Chrome. No physica
 Implementation references: [MediaRecorder completion event](https://developer.mozilla.org/en-US/docs/Web/API/MediaRecorder/stop_event), [supported recording formats](https://developer.mozilla.org/en-US/docs/Web/API/MediaRecorder/isTypeSupported_static), and [recognition errors](https://developer.mozilla.org/en-US/docs/Web/API/SpeechRecognition/error_event).
 
 A synthetic-audio check on the existing production domain also passed native Chromium recording → `/api/transcribe` → `/api/chat` with one upload and one chat request. See `production-deployment.md` for the source/deployment mismatch and remaining Vercel actions. Physical phone checks remain required.
+
+## Outer Mindu-Agent- verification update
+
+The follow-up changes were made in the outer repository (`Mindu-Agent-`), not the nested `GMC-Lumi-AI` copy:
+
+- Unlock AudioContext from the microphone tap before awaiting permission, and release it and the microphone before transcription upload. Permission cancellation and late callbacks remain guarded per recording.
+- Show a short HTTPS/type message on insecure mobile connections instead of silently hiding voice input. A phone opening a local LAN HTTP URL cannot use browser microphone capture; test the HTTPS deployment for real mobile recording.
+- Preserve source links when a saved conversation is restored, while sending only role/content history to `/api/chat`.
+- Keep concise off-topic invitations and grounded follow-ups. In demo mode, requests for unavailable specific facts (such as salaries or business licence costs) explicitly say the information cannot be confirmed rather than returning generic matching topic notes.
+
+Verified on Node.js 22: 25 unit/lifecycle tests, the production build, and 20 browser tests (10 Chromium/Pixel 7 emulation and 10 WebKit/iPhone 13 emulation). The spoken/typed comparison, follow-ups, off-topic case, permission denial, silence, transcription failure, duplicate callbacks, restored citations and native generated-audio encoding passed. Upstream transcription/AI responses in these browser tests were mocked; no fresh physical-phone or live-service checks are claimed by this update. The earlier synthetic production check above is historical evidence for the prior deployment, not a verification of these new changes on production.
+
+Still required on physical iPhone Safari and Android Chrome: OS microphone permissions, real spoken transcription accuracy, quiet/noisy rooms, automatic silence stop, interruption/background recovery and live AI grounding/source links on the HTTPS deployment. Use the checklist above.
+
+References: [microphone secure-context requirement](https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia), [Web Audio interaction requirements](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API/Best_practices).

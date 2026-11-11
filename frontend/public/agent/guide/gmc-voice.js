@@ -1,19 +1,26 @@
 /* One capture at a time. Browser APIs are injected for deterministic lifecycle tests. */
 (function (global) {
   function createVoiceInput({ env = global, transcribe, onState, onTranscript, onError }) {
-    const Recognition = env.SpeechRecognition || env.webkitSpeechRecognition;
-    const canRecord = !!(transcribe && env.navigator?.mediaDevices?.getUserMedia && env.MediaRecorder);
+    const secure = env.isSecureContext !== false;
+    const Recognition = secure && (env.SpeechRecognition || env.webkitSpeechRecognition);
+    const canRecord = !!(secure && transcribe && env.navigator?.mediaDevices?.getUserMedia && env.MediaRecorder);
     let useRecorder = !Recognition;
     let current = null;
     let destroyed = false;
     const alive = session => !destroyed && current === session && !session.finished;
+    function releaseMicrophone(session) {
+      clearInterval(session.meter);
+      const context = session.audioContext;
+      session.audioContext = null;
+      try { context?.close().catch(() => {}); } catch {}
+      session.stream?.getTracks().forEach(track => track.stop());
+      session.stream = null;
+    }
     function release(session) {
       clearTimeout(session.timer);
       clearTimeout(session.deadline);
-      clearInterval(session.meter);
       session.abort?.abort();
-      session.audioContext?.close().catch(() => {});
-      session.stream?.getTracks().forEach(track => track.stop());
+      releaseMicrophone(session);
     }
     function finish(session, text, message) {
       if (!alive(session)) return;
@@ -86,7 +93,18 @@
         }
         return;
       }
-      if (!canRecord) return fail(session, 'Voice input is unavailable in this browser. Please type your question.');
+      if (!canRecord) return fail(session, secure
+        ? 'Voice input is unavailable in this browser. Please type your question.'
+        : 'Open the secure HTTPS version to use the microphone, or type your question.');
+      // Unlock audio synchronously from the microphone tap, before the permission
+      // promise settles. Mobile browsers may drop user activation after await.
+      try {
+        const AudioContext = env.AudioContext || env.webkitAudioContext;
+        if (AudioContext) {
+          session.audioContext = new AudioContext();
+          session.audioContext.resume().catch(() => {});
+        }
+      } catch { /* Recording still works without silence analysis. */ }
       try {
         const stream = await env.navigator.mediaDevices.getUserMedia({ audio: true });
         if (!alive(session)) { stream.getTracks().forEach(track => track.stop()); return; }
@@ -96,9 +114,8 @@
         // Best-effort silence detection. Suspended/unavailable audio contexts do
         // not block recording; the transcription service remains the fallback.
         try {
-          const AudioContext = env.AudioContext || env.webkitAudioContext;
-          if (AudioContext) {
-            const context = session.audioContext = new AudioContext();
+          const context = session.audioContext;
+          if (context) {
             const analyser = context.createAnalyser();
             analyser.fftSize = 512;
             context.createMediaStreamSource(stream).connect(analyser);
@@ -106,7 +123,6 @@
             session.samples = 0;
             session.sound = false;
             let quietFrames = 0;
-            context.resume().catch(() => {});
             session.meter = setInterval(() => {
               if (context.state !== 'running') return;
               analyser.getByteTimeDomainData(samples);
@@ -129,8 +145,7 @@
           if (!alive(session) || uploaded) return;
           uploaded = true;
           clearTimeout(session.timer);
-          stream.getTracks().forEach(track => track.stop());
-          clearInterval(session.meter);
+          releaseMicrophone(session);
           if (session.samples >= 5 && !session.sound) return finish(session, null, 'I didn’t hear any speech. Try again or type your question.');
           onState('transcribing');
           const blob = new env.Blob(chunks, { type: recorder.mimeType || chunks[0]?.type || mimeType || '' });
@@ -163,6 +178,10 @@
       destroy() { cancel(); destroyed = true; },
       get active() { return !!current; },
       supported: !!Recognition || canRecord,
+      availabilityMessage: !secure
+        ? 'Open the secure HTTPS version to use the microphone, or type your question.'
+        : !Recognition && !canRecord ? 'Voice input isn’t available in this browser. You can type your question.' : '',
+
     };
   }
   if (typeof module !== 'undefined' && module.exports) module.exports = { createVoiceInput };

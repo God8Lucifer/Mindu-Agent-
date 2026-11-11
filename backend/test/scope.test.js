@@ -34,7 +34,11 @@ test('short follow-ups use the preceding substantive user question', async () =>
 });
 test('unknown GMC information is not labelled off-topic', async () => {
   const saved = process.env.OPENAI_API_KEY; process.env.OPENAI_API_KEY = '';
-  try { assert.equal((await respond({ question: 'What is GMC’s exact population in 2040?' })).answer, unavailable); }
+  try {
+    for (const question of ['What is GMC’s exact population in 2040?', 'What is the salary for GMC investment jobs?', 'How much does a GMC business licence cost?']) {
+      assert.equal((await respond({ question })).answer, unavailable);
+    }
+  }
   finally { if (saved === undefined) delete process.env.OPENAI_API_KEY; else process.env.OPENAI_API_KEY = saved; }
   assert.equal(isClearlyUnrelated('What financial policies does GMC have for bitcoin?'), false);
   assert.equal(isClearlyUnrelated('What is the weather there?', history), false);
