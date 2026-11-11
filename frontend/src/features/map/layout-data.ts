@@ -82,7 +82,7 @@ export const places: Place[] = [
     holoHeight: 2.4,
     holoLabelHeight: 4.9,
     area: '50 m²',
-    description: 'Scan or enter your ticket at the reception screen to meet Mindu and start your personalised route. The painted map wall here is where Future Postcards go.',
+    description: 'Scan or enter your ticket at the reception screen to meet your GMC guide and start your personalised route. The painted map wall here is where Future Postcards go.',
     anchor: [705, 345],
     zone: [[600, 290], [818, 290], [818, 420], [600, 420]],
   },
@@ -141,7 +141,7 @@ export const places: Place[] = [
     id: 'ai',
     name: 'AI Assistant',
     category: 'service',
-    description: 'Ask Mindu anything about what you have just seen, or leave a question for a human guide.',
+    description: 'Ask GMC anything about what you have just seen, or leave a question for a human guide.',
     anchor: [626, 400],
   },
   {

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { PageNav } from '@/components/PageNav';
 
 type Chamber = {
   id: string;
@@ -15,7 +16,7 @@ type Chamber = {
 // This pinned source identifies the project material used for the draft.
 // Replace it with the relevant approved exhibit source for each chamber.
 const projectSource = {
-  sourceLabel: 'Mindu Experience Centre exhibit notes',
+  sourceLabel: 'GMC Experience Centre exhibit notes',
   sourceUrl:
     'https://github.com/God8Lucifer/Mindu-Agent-/blob/b5e4381/frontend/src/features/map/layout-data.ts',
   reviewedOn: null,
@@ -71,7 +72,7 @@ async function downloadBriefing(selected: Chamber[]) {
   const pptx = new PptxGenJS();
 
   pptx.layout = 'LAYOUT_WIDE';
-  pptx.author = 'Mindu';
+  pptx.author = 'GMC Experience Centre';
   pptx.title = 'GMC Experience Centre Briefing';
   pptx.subject = selected.map((chamber) => chamber.name).join(', ');
 
@@ -176,8 +177,9 @@ export default function BriefingPage() {
   }
 
   return (
+    <>
+    <PageNav />
     <main className="briefing">
-      <a href="/">← Back to Mindu</a>
       <h1>Build your GMC briefing</h1>
       <p>Choose the chambers to include. Each becomes one editable PowerPoint slide.</p>
 
@@ -227,27 +229,35 @@ export default function BriefingPage() {
           max-width: 760px;
           margin: 0 auto;
           padding: 40px 22px 64px;
-          color: #122c39;
-          background: #faf9f5;
+          --b-text: #122c39; --b-bg: #faf9f5; --b-accent: #006554; --b-line: #b9cbc3;
+          --b-rule: #d9e2de; --b-off-bg: #dce5e0; --b-off-text: #42554c; --b-alert: #922f21;
+          color: var(--b-text);
+          background: var(--b-bg);
+          min-height: 100dvh;
           font-family: Arial, sans-serif;
           line-height: 1.5;
         }
-        a, small { color: #006554; }
-        h1 { margin: 24px 0 6px; font-size: clamp(2rem, 5vw, 3rem); line-height: 1.1; }
-        h2 { margin: 28px 0 8px; }
-        h3, p { margin: 8px 0; }
-        fieldset { margin: 24px 0; padding: 12px 18px; border: 1px solid #b9cbc3; }
-        legend { padding: 0 6px; font-weight: 700; }
-        label { display: flex; align-items: center; gap: 12px; padding: 9px 0; cursor: pointer; }
-        input { width: 18px; height: 18px; accent-color: #006554; }
-        article { padding: 14px 0; border-bottom: 1px solid #d9e2de; }
-        button {
-          margin-top: 24px; padding: 13px 18px; border: 0; border-radius: 8px;
-          background: #006554; color: white; font: inherit; font-weight: 700; cursor: pointer;
+        :root[data-theme='dark'] .briefing {
+          --b-text: #eef0f6; --b-bg: #12172a; --b-accent: #5fc4a8; --b-line: #343c5c;
+          --b-rule: #2a3150; --b-off-bg: #252c47; --b-off-text: #a4aac0; --b-alert: #f08a7a;
         }
-        button:disabled { background: #dce5e0; color: #42554c; cursor: default; }
-        [role='alert'] { color: #922f21; }
+        .briefing a, .briefing small { color: var(--b-accent); }
+        .briefing h1 { margin: 40px 0 6px; font-size: clamp(2rem, 5vw, 3rem); line-height: 1.1; }
+        .briefing h2 { margin: 28px 0 8px; }
+        .briefing h3, .briefing p { margin: 8px 0; }
+        .briefing fieldset { margin: 24px 0; padding: 12px 18px; border: 1px solid var(--b-line); }
+        .briefing legend { padding: 0 6px; font-weight: 700; }
+        .briefing label { display: flex; align-items: center; gap: 12px; padding: 9px 0; cursor: pointer; }
+        .briefing input { width: 18px; height: 18px; accent-color: var(--b-accent); }
+        .briefing article { padding: 14px 0; border-bottom: 1px solid var(--b-rule); }
+        .briefing button {
+          margin-top: 24px; padding: 13px 18px; border: 0; border-radius: 8px;
+          background: var(--b-accent); color: var(--b-bg); font: inherit; font-weight: 700; cursor: pointer;
+        }
+        .briefing button:disabled { background: var(--b-off-bg); color: var(--b-off-text); cursor: default; }
+        .briefing [role='alert'] { color: var(--b-alert); }
       `}</style>
     </main>
+    </>
   );
 }

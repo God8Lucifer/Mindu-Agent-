@@ -109,6 +109,8 @@
 .ks[data-step='handoff'] .ks-qr-hint,
 .ks[data-step='handoff'] .ks-or,
 .ks[data-step='handoff'] .ks-guest { opacity: 0; transition: opacity 0.35s; pointer-events: none; }
+/* drop the title's fade-in (fill-mode keeps it at opacity 1) so it can fade out */
+.ks[data-step='leaving'] .ks-title,
 .ks[data-step='handoff'] .ks-title { animation: none; }
 
 /* ---- sent to phone ---- */
@@ -143,7 +145,7 @@
 .ks-restart {
   position: fixed;
   top: 16px;
-  left: 16px;
+  left: 66px; /* right of the light/dark toggle */
   font: 13px system-ui, -apple-system, 'Segoe UI', sans-serif;
   padding: 7px 14px;
   border-radius: 999px;
@@ -153,7 +155,32 @@
   cursor: pointer;
 }
 .ks-restart[hidden] { display: none; }
-@media (prefers-color-scheme: dark) { .ks-restart { border-color: #343c5c; color: #a4aac0; } }
+:root[data-theme="dark"] .ks-restart { border-color: #343c5c; color: #a4aac0; }
+
+/* ---- light / dark toggle (top left, every screen) ---- */
+.ks-theme {
+  position: fixed;
+  top: 12px;
+  left: 16px;
+  z-index: 20; /* above the full-screen intro (10), below the page transition (50) */
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid #e2ddd0;
+  background: #ffffff;
+  color: #2f3c6b;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: transform 0.2s, border-color 0.2s, color 0.2s;
+}
+.ks-theme:hover { transform: scale(1.06); border-color: #e8874a; color: #e8874a; }
+.ks-theme:focus-visible { outline: 2px solid #e8874a; outline-offset: 2px; }
+.ks-theme svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.ks-theme .ks-moon { display: none; }
+:root[data-theme="dark"] .ks-theme { background: #1c2238; border-color: #343c5c; color: #e9e4d8; }
+:root[data-theme="dark"] .ks-theme .ks-sun { display: none; }
+:root[data-theme="dark"] .ks-theme .ks-moon { display: block; }
 
 @keyframes ks-fade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 @keyframes ks-rise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
@@ -191,9 +218,7 @@
 .ks-map:hover { transform: scale(1.06); border-color: #e8874a; color: #e8874a; }
 .ks-map[hidden] { display: none; }
 .ks-map svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; stroke-linecap: round; }
-@media (prefers-color-scheme: dark) {
-  .ks-map { background: #1c2238; border-color: #343c5c; color: #e9e4d8; }
-}
+:root[data-theme="dark"] .ks-map { background: #1c2238; border-color: #343c5c; color: #e9e4d8; }
 
 .ks-veil {
   position: fixed;
@@ -234,3 +259,18 @@
 .ks-veil-dark { background: #12172a; box-shadow: inset 0 0 0 1px #343c5c; }
 .ks-veil-dark .ks-veil-inner { color: #e9e4d8; }
 .ks-veil-dark .ks-veil-inner svg { color: #e8874a; }
+
+/* "Build my briefing" link under the side buttons */
+.ks-side a {
+  font: 600 12px system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color: #646a82;
+  text-decoration: none;
+  text-align: center;
+  padding: 6px 10px;
+  border: 1px solid #e2ddd0;
+  border-radius: 999px;
+  background: #ffffff;
+  transition: color 0.2s, border-color 0.2s;
+}
+.ks-side a:hover { color: #e8874a; border-color: #e8874a; }
+:root[data-theme="dark"] .ks-side a { background: #1c2238; border-color: #343c5c; color: #a4aac0; }
