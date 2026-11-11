@@ -3,7 +3,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { PageNav } from '@/components/PageNav';
-import Image from 'next/image';
+import { GmcLogo } from '@/components/GmcLogo';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SHOTS_PER_CHAMBER, chambers, isChamber, type Chamber } from './chambers';
 import { buildCollection } from './compose';
@@ -135,11 +135,6 @@ function Hub({ shots, loaded, focus, picked, onPick, onShoot, onBuild, onStartOv
   const active = chambers.find(c => c.id === activeId) ?? chambers[0];
   const photos = urls[active.id] ?? [];
 
-  const tabsRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    tabsRef.current?.querySelector<HTMLElement>('[aria-selected="true"]')?.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
-  }, [activeId]);
-
   const [saving, setSaving] = useState(false);
   const saveChamberCard = async () => {
     const blobs = shots[active.id];
@@ -161,9 +156,7 @@ function Hub({ shots, loaded, focus, picked, onPick, onShoot, onBuild, onStartOv
   return (
     <div className={styles.hub}>
       <header className={styles.hubHead}>
-        <span className={styles.logoTile}>
-          <Image src="/gmc-logo-light.svg" alt="" width={30} height={30} unoptimized />
-        </span>
+        <GmcLogo />
       </header>
 
       <div className={styles.intro}>
@@ -175,7 +168,7 @@ function Hub({ shots, loaded, focus, picked, onPick, onShoot, onBuild, onStartOv
         <p>Take {SHOTS_PER_CHAMBER} photos in each chamber. We put them together into one collection, ready to share.</p>
       </div>
 
-      <div className={styles.tabs} role="tablist" aria-label="Chambers" ref={tabsRef}>
+      <div className={styles.tabs} role="tablist" aria-label="Chambers">
         {chambers.map(c => {
           const done = (shots[c.id]?.length ?? 0) >= SHOTS_PER_CHAMBER;
           const on = c.id === active.id;
@@ -189,7 +182,7 @@ function Hub({ shots, loaded, focus, picked, onPick, onShoot, onBuild, onStartOv
               onClick={() => onPick(c.id)}
             >
               <span className={`${styles.tabNum} ${done ? styles.tabDone : ''}`}>{done ? '✓' : c.number}</span>
-              {c.name}
+              <span className={styles.tabText}>{c.name}</span>
             </button>
           );
         })}
@@ -237,27 +230,28 @@ function Hub({ shots, loaded, focus, picked, onPick, onShoot, onBuild, onStartOv
             <button type="button" className={styles.ghostBtn} onClick={() => onShoot(active)} disabled={!loaded}>↻ Retake all</button>
           </div>
         )}
-      </section>
-
       <div className={styles.bottomBar}>
         <div className={styles.bottomInner}>
           <div className={styles.bottomInfo}>
-            <span className={styles.chamberNum}>{active.number}</span>
             <div>
-              <strong>Chamber {pad2(active.number)}</strong>
-              <small>{Math.round((photos.length / SHOTS_PER_CHAMBER) * 100)}% complete · {doneCount}/{chambers.length} chambers</small>
+              <strong>Collection progress</strong>
+              <small>{doneCount} of {chambers.length} chambers complete</small>
             </div>
           </div>
           {photoCount > 0 && <button type="button" className={styles.linkBtn} onClick={onStartOver}>Start over</button>}
+          <div className={styles.collectionProgress} role="progressbar" aria-label="Photo collection progress" aria-valuemin={0} aria-valuemax={total} aria-valuenow={photoCount}>
+            <span style={{ width: `${photoCount / total * 100}%` }} />
+          </div>
           <button
             type="button"
             className={styles.primaryBtn}
             onClick={onBuild}
             disabled={!doneCount}
             title={doneCount ? 'Build and save your collection' : 'Shoot a chamber first'}
-          >✦ Make collection</button>
+          >{doneCount ? 'Make my collection' : 'Complete a chamber to make your collection'}</button>
         </div>
       </div>
+      </section>
     </div>
   );
 }
@@ -276,6 +270,7 @@ function Shoot({ chamber, single, onDone, onCancel }: { chamber: Chamber; single
   const [kept, setKept] = useState<Blob[]>([]);
   const [pending, setPending] = useState<{ blob: Blob; url: string } | null>(null);
   const [count, setCount] = useState<number | null>(null);
+  const [timerEnabled, setTimerEnabled] = useState(true);
   const [flash, setFlash] = useState(false);
   const [cameraError, setCameraError] = useState('');
   const [captureError, setCaptureError] = useState('');
@@ -376,7 +371,7 @@ function Shoot({ chamber, single, onDone, onCancel }: { chamber: Chamber; single
     if (count === null) return;
     const t = setTimeout(() => {
       if (count <= 1) { setCount(null); snap(); } else setCount(count - 1);
-    }, 800);
+    }, 1000);
     return () => clearTimeout(t);
   }, [count, snap]);
 
@@ -412,10 +407,12 @@ function Shoot({ chamber, single, onDone, onCancel }: { chamber: Chamber; single
         <button
           type="button"
           className={styles.barBtn}
-          onClick={() => { setCamState('starting'); setFacing(f => (f === 'user' ? 'environment' : 'user')); }}
-          disabled={camState !== 'on' || !!pending}
-          aria-label="Switch camera"
-        >⟲ Flip</button>
+          onClick={() => setTimerEnabled(enabled => !enabled)}
+          disabled={camState !== 'on' || !!pending || count !== null || processing}
+          aria-label="3-second photo timer"
+          aria-pressed={timerEnabled}
+          title="Timer for the live camera"
+        >Timer {timerEnabled ? '3s' : 'off'}</button>
       </div>
 
       <div className={styles.viewfinder}>
@@ -473,11 +470,27 @@ function Shoot({ chamber, single, onDone, onCancel }: { chamber: Chamber; single
             <button
               type="button"
               className={styles.shutter}
-              onClick={() => camState === 'on' ? setCount(3) : cameraFileRef.current?.click()}
+              onClick={() => {
+                if (camState !== 'on') cameraFileRef.current?.click();
+                else if (timerEnabled) setCount(3);
+                else void snap();
+              }}
               disabled={camState === 'starting' || count !== null || processing}
               aria-label="Take photo"
             />
-            <span className={styles.ctrlSpacer} />
+            <button
+              type="button"
+              className={styles.switchCamera}
+              onClick={() => { setCamState('starting'); setFacing(f => (f === 'user' ? 'environment' : 'user')); }}
+              disabled={camState !== 'on' || count !== null || processing}
+              aria-label="Switch camera"
+              title="Switch camera"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 7h3l2-3h6l2 3h3v13H4z" />
+                <path d="M8 12a4 4 0 0 1 7-1l1 1m0-3v3h-3M16 16a4 4 0 0 1-7 1l-1-1m0 3v-3h3" />
+              </svg>
+            </button>
           </>
         )}
       </div>
@@ -591,7 +604,7 @@ function Result({ shots, onBack }: { shots: Record<string, Blob[]>; onBack: () =
   return (
     <div className={styles.result}>
       <div className={styles.shootBar}>
-        <button type="button" className={styles.barBtn} onClick={onBack}>← Back</button>
+        <button type="button" className={styles.barBtn} onClick={onBack}>Back</button>
         <span className={styles.shootTitle}>Your collection</span>
         <span className={styles.ctrlSpacer} />
       </div>

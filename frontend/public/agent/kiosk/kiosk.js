@@ -207,7 +207,7 @@
       intro.dataset.step = 'leaving';
       stage.dataset.state = 'speaking';
 
-      const guide = (currentGuide = mountGuide(guideEl, { wake: false, autoGreet: false }));
+      const guide = (currentGuide = mountGuide(guideEl, { wake: false, autoGreet: false, restore: onPhone ? loadChat() : [] }));
       guideEl.hidden = false;
       guideEl.classList.add('ks-enter');
       const target = guideEl.querySelector('.mg-stage');
@@ -223,6 +223,7 @@
       guideEl.classList.add('ks-in');
       if (restart) restart.hidden = onPhone;
       showLinks(true);
+      if (onPhone) history.replaceState(null, '', `${location.pathname}?mobile=1`);
       guide.greet();
       busy = false;
     }
@@ -282,6 +283,9 @@
       document.querySelectorAll('.ks-veil').forEach((v) => v.remove());
       busy = false;
     });
+    window.addEventListener('pagehide', () => {
+      if (onPhone && currentGuide) saveChat(currentGuide.transcript());
+    });
 
     if (restart) restart.addEventListener('click', () => !busy && showIntro());
     links.forEach((link) => {
@@ -297,10 +301,15 @@
       showLinks(false);
       const id = params.get('handoff');
       if (!id) { busy = false; await enterGuide(); return; }
+      const fallbackLogo = `<div class="mg-stage ks-code-fallback" data-state="wake" role="img" aria-label="GMC logo">${MinduGuide.logoSvg()}</div>`;
+      const animateFallback = () => {
+        const logo = intro.querySelector('.ks-code-fallback');
+        wait(2400).then(() => { if (logo?.isConnected) logo.dataset.state = 'idle'; });
+      };
       intro.innerHTML = `
         <div class="ks-hero">
           <div class="ks-phone-box">
-            <div class="ks-phone-code" aria-hidden="true"></div>
+            <div class="ks-phone-code">${fallbackLogo}</div>
             <div class="mg-stage ks-phone-logo" data-state="idle">
               <span class="mg-ring"></span><span class="mg-ring"></span><span class="mg-ring"></span>
               ${MinduGuide.logoSvg()}
@@ -312,9 +321,10 @@
             <button type="button" class="ks-guest ks-pair-skip">Open chat</button>
           </div>
         </div>`;
+      animateFallback();
       try {
         let status = await handoffRequest({ action: 'claim', id });
-        intro.querySelector('.ks-phone-code').innerHTML = status.svg || '';
+        if (status.svg) intro.querySelector('.ks-phone-code').innerHTML = status.svg;
         intro.querySelector('.ks-title span').textContent = 'Receiving your guide. Keep this screen open.';
         const deadline = Date.now() + 20000;
         while (!status.connected) {
@@ -335,6 +345,8 @@
         await revealChat();
       } catch (error) {
         intro.dataset.step = 'pair-error';
+        intro.querySelector('.ks-phone-code').innerHTML = fallbackLogo;
+        animateFallback();
         intro.querySelector('.ks-title span').textContent = error.name === 'TimeoutError'
           ? 'Connection timed out. Try again or open chat.' : error.message;
         intro.querySelector('.ks-pair-actions').hidden = false;

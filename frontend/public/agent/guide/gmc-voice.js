@@ -47,6 +47,11 @@
     }
     async function start() {
       if (destroyed || current) return;
+      if (env.isSecureContext === false) {
+        onState('idle');
+        onError('Voice input needs a secure HTTPS connection. Open the secure site, then retry or type your question.');
+        return;
+      }
       const session = { finished: false, stopping: false, abort: new AbortController() };
       current = session;
       onState('requesting');

@@ -62,7 +62,7 @@ export function VenueScene({ controlsRef, theme, selectedId, holoId, labelRefs, 
         makeDefault
         enabled={!holoId}
         minDistance={10}
-        maxDistance={140}
+        maxDistance={220}
         maxPolarAngle={Math.PI / 2.3}
         smoothTime={0.35}
         mouseButtons={{ left: ACTION.ROTATE, middle: ACTION.DOLLY, right: ACTION.TRUCK, wheel: ACTION.DOLLY }}
@@ -478,11 +478,26 @@ function LabelProjector({ labelRefs }: { labelRefs: RefObject<Map<string, HTMLEl
       let x = ((v.x + 1) / 2) * size.width;
       let y = ((1 - v.y) / 2) * size.height;
       if (clamp) {
+        let top = size.width <= 720 ? 196 : 70;
+        let bottom = size.height - 12;
+        if (size.width <= 720 && el.dataset.fitPanel === 'true') {
+          // Fit the complete wheel above the real sheet, not behind it. Use the
+          // actual toolbar/sheet bounds so browser chrome and safe areas count.
+          const host = el.parentElement;
+          const hostTop = host?.getBoundingClientRect().top ?? 0;
+          const toolbar = host?.querySelector<HTMLElement>('[aria-label="View"]');
+          const panel = host?.querySelector<HTMLElement>('[data-chamber-panel]');
+          top = toolbar ? toolbar.getBoundingClientRect().bottom - hostTop + 16 : 148;
+          bottom = panel ? panel.getBoundingClientRect().top - hostTop - 16 : bottom;
+          const heading = el.querySelector('header')?.offsetHeight ?? 48;
+          const room = `${Math.max(104, bottom - top - heading - 12)}px`;
+          if (el.style.getPropertyValue('--sector-room') !== room) el.style.setProperty('--sector-room', room);
+        }
         const hw = el.offsetWidth / 2 + 12, hh = el.offsetHeight / 2 + 12;
         x = Math.min(Math.max(x, hw), size.width - hw);
-        // Stay below the header (and, on phones, the view buttons under it).
-        const top = size.width < 720 ? 196 : 70;
-        y = Math.min(Math.max(y, hh + top), size.height - hh);
+        const minY = hh + top;
+        const maxY = bottom - hh;
+        y = maxY < minY ? (top + bottom) / 2 : Math.min(Math.max(y, minY), maxY);
         el.style.visibility = v.z > 1 ? 'hidden' : 'visible';
       } else {
         const hidden = v.z > 1 || Math.abs(v.x) > 1.2 || Math.abs(v.y) > 1.2;

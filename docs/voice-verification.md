@@ -1,5 +1,22 @@
 # Mobile voice input verification
 
+## Reverification on 11 November 2026
+
+The merged `main` already contained the shared voice/chat pipeline and polite
+off-topic handling. This pass added an explicit HTTPS message before capture on
+an insecure phone origin, and kept the microphone recovery UI available when a
+browser has no capture APIs. Explicit microphone opt-out still hides the button.
+
+All 25 backend/lifecycle tests, all 18 browser checks, and the production build
+passed. The browser checks comprise nine Android/Chromium and nine iPhone/WebKit
+emulated checks. Three new checks per browser exercise real `/api/chat` requests
+for the typed/spoken GMC question, spoken follow-up and unrelated request; a real
+`/api/transcribe` error response; and recovery without capture APIs. Successful
+transcription is simulated for these checks. Existing tests separately verify
+source-link rendering and grounded AI request context with mocked upstream AI.
+No physical microphone, Safari app, Android Chrome app, or live AI/transcription
+service was tested in this pass. Earlier production checks below are historical.
+
 The guide now uses `guide/gmc-voice.js` for capture and `gmc-guide.js` for chat. Every successful transcript calls the same `ask(question)` as a typed submission. The existing page adapter posts question, history, chamber and audience to `/api/chat` and displays returned source links. The request size limit accommodates all eight history turns without rejecting longer conversations. Browser recognition does not upload audio; its completed transcript follows the same chat path. If recognition is absent, or fails with a service/network error and the visitor retries, MediaRecorder sends the supported encoded format to `/api/transcribe` first.
 
 Each capture owns its recorder, microphone stream, timers, cancellation signal and completion flag. Repeated end/stop events cannot resubmit it. The button finishes recording; speech followed by about 1.4 seconds of silence also finishes it when an active audio analyser is available. The 15-second cap remains a fallback. Audio analysis is best effort: a suspended or unavailable audio context falls back to the button/time limit and transcription validation. Empty clips, detected silence, permission denial, unavailable devices and transcription errors show a short message with retry/type controls. Leaving the page or restarting the kiosk releases capture resources.
@@ -8,9 +25,9 @@ The backend rejects clearly unrelated requests with a concise GMC invitation. Am
 
 ## Automated checks
 
-- `npm test`: 23 unit/lifecycle tests, including history/context/source preservation, unrelated questions, unavailable GMC information, MP4 transcription extension, empty speech, duplicate capture events, an old timer overlapping a new recording, late permission resolution, silence detection, automatic stop after speech, stalled-upload recovery, and full bounded multibyte conversation payloads.
+- `npm test`: 25 unit/lifecycle tests, including history/context/source preservation, chained follow-ups, unrelated questions, unavailable GMC information, insecure phone origins, MP4 transcription extension, empty speech, duplicate capture events, an old timer overlapping a new recording, late permission resolution, silence detection, automatic stop after speech, stalled-upload recovery, and full bounded multibyte conversation payloads.
 - `npm run build`: production compilation, type checking and prerendering.
-- `npm run test:browser`: 12 UI tests, six each in Chromium with Pixel 7 settings and WebKit with iPhone 13 settings. Requires Playwright's Chromium and WebKit downloads (`npx playwright install chromium webkit`). These tests use simulated recognition/recorder/permission events and mocked upstream transcription/AI responses. They exercise the actual page adapter, chat UI and backend reply logic without using a private API key.
+- `npm run test:browser`: 18 UI tests, nine each in Chromium with Pixel 7 settings and WebKit with iPhone 13 settings. Requires Playwright's Chromium and WebKit downloads (`npx playwright install chromium webkit`). These tests use simulated recognition/recorder/permission events. They cover both real local API routes and mocked upstream transcription/AI responses without using a private API key.
 
 The browser checks cover the same question typed and spoken ("What is GMC?"), a spoken "Why?", a spoken unrelated question ("Tell me a joke."), visible transcripts and source links, supported WebM/MP4 selection, one upload and chat per recording, disabled duplicate sends, permission denial, empty recordings, transcription failure, typing recovery, and a runtime recognition failure switching to recorded transcription on retry, plus capture cancellation and reuse after page hide. Integration checks also preserve the upstream GMC branding, theme toggle and explicit microphone opt-out.
 

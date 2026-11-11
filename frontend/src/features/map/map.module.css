@@ -44,13 +44,6 @@
   border: 1px solid var(--line); border-radius: var(--radius); padding: 6px 16px 6px 6px;
   box-shadow: var(--shadow);
 }
-.logoTile {
-  width: 44px; height: 44px; flex: none;
-  display: grid; place-items: center;
-  background: var(--ink); border-radius: calc(var(--radius) - 2px);
-}
-.logoTile img { width: 34px; height: 34px; display: block; }
-:global(:root[data-theme="dark"]) .logoTile { background: #0d1120; border: 1px solid var(--line); }
 .brand strong { display: block; font-weight: 900; font-size: 16px; line-height: 1.15; color: var(--ink); }
 .brand .eyebrow { display: block; margin-bottom: 2px; }
 
@@ -201,7 +194,7 @@
 }
 @keyframes rise { from { opacity: 0; transform: translate(-50%, 12px); } }
 .cardClose { position: absolute; top: 12px; right: 12px; }
-.cardHead { display: flex; gap: 12px; align-items: center; padding-right: 30px; }
+.cardHead { display: flex; gap: 12px; align-items: center; }
 .cardHead h3 { margin: 0; font-size: 20px; font-weight: 900; line-height: 1.15; color: var(--ink); }
 .cardBadge { width: 40px; height: 40px; border-radius: calc(var(--radius) - 2px); display: grid; place-items: center; font-weight: 900; font-size: 17px; flex: none; }
 .cardMeta { margin: 4px 0 0; font-size: 10px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
@@ -221,7 +214,13 @@
   color: var(--location-ink); background: var(--location-bg); border: 1px solid var(--location-line);
   border-radius: 999px; padding: 8px 11px; font-weight: 700; font-size: 11px;
 }
-.stage .locationAction { min-height: 44px; color: var(--location-ink); font-size: 13px; }
+.stage .locationAction, .stage .hereTag {
+  width: 100%; flex: 0 0 100%; box-sizing: border-box;
+  min-height: 50px; padding: 13px 18px; gap: 9px; border-radius: 14px;
+  color: var(--location-ink); font-size: 15px; font-weight: 700;
+  transition: background .2s, border-color .2s, filter .2s;
+}
+.locationAction svg, .hereTag svg { width: 20px; height: 20px; }
 .locationAction:hover { filter: brightness(1.06); }
 .hereTag svg, .locationAction svg { flex-shrink: 0; }
 
@@ -238,8 +237,6 @@
   .dock button { min-height: 48px; padding: 12px 16px; border-radius: 14px; }
   .header { top: calc(14px + env(safe-area-inset-top, 0px)); left: 16px; right: 76px; }
   .brand { min-width: 0; flex: 1; gap: 10px; padding: 8px; border-radius: 16px; }
-  .logoTile { width: 38px; height: 38px; }
-  .logoTile img { width: 30px; height: 30px; }
   .brand strong { font-size: clamp(14px, 3.8vw, 17px); line-height: 1.25; }
   .brand .eyebrow { font-size: 8px; letter-spacing: .08em; line-height: 1.4; }
   .hints { top: auto; bottom: calc(82px + env(safe-area-inset-bottom, 0px)); left: 16px; right: 16px; justify-content: center; transform: none; font-size: 11px; white-space: normal; text-align: center; }
@@ -252,7 +249,6 @@
   .card { bottom: calc(84px + env(safe-area-inset-bottom, 0px)); padding: 20px; border-radius: 20px; max-height: 44dvh; overflow-y: auto; }
   .cardText { font-size: 15px; line-height: 1.65; }
   .cardClose, .close { width: 40px; height: 40px; }
-  .cardHead { padding-right: 40px; }
   .cardActions { gap: 12px; }
   .cardActions button { min-height: 44px; font-size: 12px; }
   .panel { bottom: calc(80px + env(safe-area-inset-bottom, 0px)); max-height: calc(100dvh - 238px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); border-radius: 20px; }

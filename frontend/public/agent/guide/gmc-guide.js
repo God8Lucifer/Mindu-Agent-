@@ -257,9 +257,15 @@
         voiceActions.hidden = false;
       },
     });
-    mic.hidden = !voiceInput?.supported;
+    // Keep recovery reachable even when this browser cannot capture audio.
+    mic.hidden = opts.mic === false;
     mic.addEventListener('click', () => {
-      if (busy || !voiceInput) return;
+      if (busy) return;
+      if (!voiceInput) {
+        status.textContent = 'Voice input is unavailable. Please type your question.';
+        voiceActions.hidden = false;
+        return;
+      }
       if (voiceInput.active) voiceInput.stop();
       else {
         if (voice) speechSynthesis.cancel();
